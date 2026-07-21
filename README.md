@@ -1,7 +1,5 @@
 # 越陌 CROSS
 
-> 源码位于 [`CROSS/`](CROSS)。下方所有本地运行命令请先进入该目录：`cd CROSS`。
-
 旅行规划常常分散在攻略笔记、地图收藏、聊天记录和日程表里：地点能记住，却很难判断它们是否顺路、一天是否排得下，也需要在多个 App 之间反复切换。
 
 **越陌 CROSS** 将地点收集、地图查看、路线编排、分日行程、预算管理和 AI 对话整合在同一个工作台。用户可以在地图上直观看到地点分布，再按区域、天数和游览节奏安排顺序，减少跨区折返，让“想去哪里”逐步变成一份清晰的旅行计划。
@@ -202,50 +200,4 @@ npm run preview
 
 使用者需要申请并填写**自己的** DeepSeek、高德与数据库配置。无需也不应共享作者的模型密钥、额度或账户权限。
 
-## 路由页面
 
-当前前端路由如下：
-
-- `/home` 首页
-- `/map` 路线规划
-- `/schedule` 日程安排
-- `/budget` 预算管理
-
-访问根路径 `/` 时会自动跳转到 `/home`。
-
-## 部署说明
-
-### Vercel 部署前端
-
-- Root Directory 设为 `CROSS`
-- Build Command 使用 `npm run build`
-- Output Directory 使用 `dist`
-
-当前 `npm run build` 已不再执行 `vue-tsc`，避免在 Vercel 上因 `vue-tsc` 与 Node 版本兼容性导致构建失败。
-
-### Firebase
-
-- 在 Firebase 控制台创建 Web 应用
-- 将配置写入 `.env` 或 Vercel 环境变量
-- 根据需要发布 `firestore.rules`
-
-### Render 部署后端
-
-`render.yaml` 当前用于部署可选的 Node 服务：
-
-- `buildCommand`: `npm install --prefix server`
-- `startCommand`: `node server/index.js`
-
-## 常用脚本
-
-- `npm run dev` 启动前端开发环境
-- `npm run build` 构建前端
-- `npm run preview` 预览构建产物
-- `npm run server` 启动本地 Express API
-- `npm run deploy:firebase` 构建并执行 Firebase 部署
-
-后端测试与评测：
-
-- `npm test --prefix server`：运行确定性回归测试
-- `npm run eval:offline --prefix server`：运行离线 Harness 评测并生成报告
-- `npm run eval:live --prefix server -- --version=v1-structured`：调用真实 DeepSeek/高德；仅在密钥已配置时运行
