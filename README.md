@@ -17,7 +17,7 @@
 
 ![CROSS 路线规划工作台：地图、地点列表与 AI 助手联动](CROSS/public/readme/map-planner.png)
 
-## 一次旅行如何在 CROSS 中完成
+## 如何规划行程
 
 ```text
 自行添加/与AI助手聊天添加景点 -> 在地图上安排顺序 -> 生成分日行程 -> 与 Agent 讨论调整 -> 确认保存
