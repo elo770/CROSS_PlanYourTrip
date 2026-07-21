@@ -4,6 +4,7 @@ CROSS/dist/
 CROSS/dist-ssr/
 CROSS/.env
 CROSS/.env.*
+!CROSS/.env.example
 CROSS/server/node_modules/
 CROSS/server/.env
 

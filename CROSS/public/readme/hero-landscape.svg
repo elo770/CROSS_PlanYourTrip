@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 400" role="img" aria-label="CROSS 首页山景插图">
+  <rect width="1600" height="400" fill="#d8dcdd"/>
+  <path fill="#8a8798" fill-opacity=".28" d="M0 228L190 136l188 72 230-108 214 122 190-134 226 128 202-82 160 70v196H0Z"/>
+  <path fill="#5f5b70" fill-opacity=".42" d="M0 282l250-92 216 90 240-122 226 126 220-104 230 108 218-70v182H0Z"/>
+  <path fill="#5b6b73" fill-opacity=".55" d="M0 334l284-72 244 74 268-88 242 82 278-66 284 74v62H0Z"/>
+  <g fill="none" stroke="#1d2226" stroke-linecap="round" stroke-linejoin="round" transform="translate(500 300) rotate(-3) scale(.8)">
+    <circle cx="3" cy="-94" r="10" stroke-opacity=".82" stroke-width="1.6"/>
+    <path d="M-2-84 -3-74M6-85 7-75M-8-73C-24-48-32-18-28 10-26 26-36 38-48 48M10-73C18-50 14-24 20 0 24 16 20 32 26 46M-48 48C-30 54-6 52 26 46M8 10C14 28 16 44 22 60 26 72 28 82 32 92M-10 8C-18 24-24 38-30 52-36 64-40 76-46 88" stroke-opacity=".68" stroke-width="1.6"/>
+    <path d="M0 10C4 26 4 42 8 58 10 70 12 80 16 90M-2 8C-8 22-12 34-16 46-20 58-22 70-26 82" stroke-opacity=".5" stroke-width="1.6"/>
+    <path d="M-6-102C-18-108-30-104-36-92M-2-104C-14-112-26-110-33-100M2-100C-6-106-14-104-19-98" stroke-opacity=".45" stroke-width="1.6"/>
+  </g>
+</svg>

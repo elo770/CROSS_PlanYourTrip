@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 104" role="img" aria-label="CROSS 空路线插图">
+  <rect width="240" height="104" fill="#d8dcdd"/>
+  <path d="M2 73C38 42 68 43 98 64c24 16 48 15 72-3 24-18 47-17 68 2" fill="none" stroke="#8a8798" stroke-linecap="round" stroke-width="18" stroke-opacity=".14"/>
+  <path d="M2 84c34-18 64-17 91 0 24 15 48 14 72-2 25-16 49-15 73 1" fill="none" stroke="#5b6b73" stroke-linecap="round" stroke-width="22" stroke-opacity=".13"/>
+  <path d="M25 88c33-26 58-9 83-24 28-17 49 8 80-13" fill="none" stroke="#1d2226" stroke-dasharray="4 7" stroke-linecap="round" stroke-width="1.25" stroke-opacity=".55"/>
+  <circle cx="25" cy="88" r="3" fill="#5f7267" fill-opacity=".8"/>
+  <circle cx="188" cy="51" r="4" fill="#a14b3c"/>
+</svg>
