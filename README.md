@@ -1,10 +1,12 @@
 # 越陌 CROSS
 
+> 源码位于 [`CROSS/`](CROSS)。下方所有本地运行命令请先进入该目录：`cd CROSS`。
+
 旅行规划常常分散在攻略笔记、地图收藏、聊天记录和日程表里：地点能记住，却很难判断它们是否顺路、一天是否排得下，也需要在多个 App 之间反复切换。
 
 **越陌 CROSS** 将地点收集、地图查看、路线编排、分日行程、预算管理和 AI 对话整合在同一个工作台。用户可以在地图上直观看到地点分布，再按区域、天数和游览节奏安排顺序，减少跨区折返，让“想去哪里”逐步变成一份清晰的旅行计划。
 
-![CROSS 首页山景](public/readme/hero-landscape.svg)
+![CROSS 首页山景](CROSS/public/readme/hero-landscape.svg)
 
 ## CROSS 解决什么问题
 
@@ -15,7 +17,7 @@
 | 改一个地点后还要手动改地图和日程 | 地点、每日顺序和行程联动更新 | 减少重复整理，方便持续调整 |
 | AI 一次生成后难以继续讨论 | Agent 保留草案与上下文，可继续分析和修改 | 先讨论、再确认，不必从头规划 |
 
-![未形成路线时的路径插图](public/readme/route-empty-state.svg)
+![未形成路线时的路径插图](CROSS/public/readme/route-empty-state.svg)
 
 ## 一次旅行如何在 CROSS 中完成
 
