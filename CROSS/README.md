@@ -1,8 +1,19 @@
 # 越陌 CROSS
 
+旅行规划常常分散在攻略笔记、地图收藏、聊天记录和日程表里：地点能记住，却很难判断它们是否顺路、一天是否排得下，也需要在多个 App 之间反复切换。
+
+**越陌 CROSS** 将地点收集、地图查看、路线编排、分日行程、预算管理和 AI 对话整合在同一个工作台。用户可以在地图上直观看到地点分布，再按区域、天数和游览节奏安排顺序，减少跨区折返，让“想去哪里”逐步变成一份清晰的旅行计划。
+
 ![CROSS 首页山景](public/readme/hero-landscape.svg)
 
-**越陌 CROSS** 是一个地图驱动的对话式旅行规划产品。它把地点收集、路线编排、分日行程、预算管理和 AI 对话放到同一个工作台：用户既能直接在地图上规划，也能像聊天一样逐步形成一份可执行、可继续调整的旅行计划。
+## CROSS 解决什么问题
+
+| 原有规划方式 | CROSS 的做法 | 用户收益 |
+| --- | --- | --- |
+| 攻略、收藏、地图和日程分散在多个工具 | 地点、地图、日程和预算共享同一份行程 | 不必反复复制、切换和核对信息 |
+| 只看文字列表，难判断地点是否集中 | 在地图上显示地点分布与连接顺序 | 更直观看出跨区安排和潜在折返 |
+| 改一个地点后还要手动改地图和日程 | 地点、每日顺序和行程联动更新 | 减少重复整理，方便持续调整 |
+| AI 一次生成后难以继续讨论 | Agent 保留草案与上下文，可继续分析和修改 | 先讨论、再确认，不必从头规划 |
 
 ![未形成路线时的路径插图](public/readme/route-empty-state.svg)
 
@@ -262,30 +273,3 @@ npm run preview
 - `npm test --prefix server`：运行确定性回归测试
 - `npm run eval:offline --prefix server`：运行离线 Harness 评测并生成报告
 - `npm run eval:live --prefix server -- --version=v1-structured`：调用真实 DeepSeek/高德；仅在密钥已配置时运行
-
-## 上传 GitHub 前的检查
-
-建议提交源码、测试、文档、锁文件、环境变量示例文件和 README 插图，例如：
-
-```text
-src/  server/  docs/  public/readme/
-package.json  package-lock.json
-.env.example  server/env.example
-```
-
-不要提交以下内容：
-
-```text
-.env  server/.env  node_modules/  dist/  logs/
-数据库备份、Firebase 服务账号 JSON、部署 Token、真实用户聊天记录或行程数据
-```
-
-提交前可执行：
-
-```bash
-git status
-git diff --cached --check
-git diff --cached --name-only
-```
-
-确认暂存列表中没有 `.env`、真实密钥、个人配置或本地缓存后再推送。仓库中的 `.gitignore` 已覆盖常见环境变量、依赖目录和构建产物，但上传前仍应人工核对一次。
