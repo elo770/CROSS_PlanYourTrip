@@ -3,8 +3,7 @@
     <el-header class="app-header">
       <div class="header-content">
         <h1 class="logo">
-          <el-icon><MapLocation /></el-icon>
-          越陌CROSS
+          越陌 <span>CROSS</span>
         </h1>
         <el-menu
           :default-active="activeMenu"
@@ -14,19 +13,15 @@
           class="header-menu"
         >
           <el-menu-item index="/home">
-            <el-icon><HomeFilled /></el-icon>
             <span>首页</span>
           </el-menu-item>
           <el-menu-item index="/map">
-            <el-icon><MapLocation /></el-icon>
             <span>路线规划</span>
           </el-menu-item>
           <el-menu-item index="/schedule">
-            <el-icon><Calendar /></el-icon>
             <span>日程安排</span>
           </el-menu-item>
           <el-menu-item index="/budget">
-            <el-icon><Money /></el-icon>
             <span>预算管理</span>
           </el-menu-item>
         </el-menu>
@@ -41,7 +36,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { HomeFilled, MapLocation, Calendar, Money } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const activeMenu = computed(() => route.path)
@@ -50,14 +44,21 @@ const activeMenu = computed(() => route.path)
 <style scoped>
 .app-container {
   height: 100vh;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .app-header {
-  background: #F5F5F5;
-  color: #2C2C2C;
+  flex: 0 0 60px;
+  position: relative;
+  z-index: 20;
+  background: rgba(216, 220, 221, 0.9);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+  color: var(--cross-ink);
   padding: 0;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  border-bottom: 1px solid #E0E0E0;
+  box-shadow: 0 1px 0 rgba(29, 34, 38, 0.08);
+  border-bottom: 1px solid var(--cross-border);
 }
 
 .header-content {
@@ -75,13 +76,18 @@ const activeMenu = computed(() => route.path)
   left: 20px;
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-size: 24px;
-  font-weight: 600;
+  gap: 5px;
+  color: var(--cross-ink);
+  font-size: 20px;
+  font-weight: 650;
   margin: 0;
 }
 
+.logo span { font-weight: 500; }
+
 .header-menu {
+  --el-menu-active-color: var(--cross-ink);
+  --el-menu-hover-text-color: var(--cross-ink);
   background: transparent;
   border: none;
   width: 100%;
@@ -90,18 +96,26 @@ const activeMenu = computed(() => route.path)
 }
 
 .header-menu :deep(.el-menu-item) {
-  color: #666;
+  color: var(--cross-muted);
   border-bottom: 2px solid transparent;
+  font-size: 13px;
+  transition: color 0.2s ease, background-color 0.2s ease;
 }
 
 .header-menu :deep(.el-menu-item:hover),
 .header-menu :deep(.el-menu-item.is-active) {
-  background: rgba(0, 0, 0, 0.05);
-  color: #333;
-  border-bottom-color: #999;
+  background: transparent;
+  color: var(--cross-ink);
+}
+
+.header-menu :deep(.el-menu-item.is-active) {
+  color: var(--cross-ink) !important;
+  border-bottom-color: var(--cross-terracotta);
 }
 
 .app-main {
+  flex: 0 0 calc(100vh - 60px);
+  min-height: 0;
   padding: 0;
   overflow: auto;
   height: calc(100vh - 60px);

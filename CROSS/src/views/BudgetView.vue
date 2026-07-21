@@ -1,8 +1,8 @@
 <template>
   <div class="budget-view">
-    <el-row :gutter="20">
-      <el-col :span="16">
-        <el-card>
+    <el-row :gutter="0" class="budget-layout">
+      <el-col :span="14" class="ledger-column">
+        <el-card class="budget-ledger" shadow="never">
           <template #header>
             <div class="card-header">
               <span>预算明细</span>
@@ -17,7 +17,7 @@
             <el-table-column prop="day" label="天数" width="80" />
             <el-table-column prop="type" label="类型" width="120">
               <template #default="{ row }">
-                <el-tag :type="getTypeColor(row.type)">{{ row.type }}</el-tag>
+                <el-tag effect="plain" class="budget-type-tag" :style="budgetTypeStyle(row.type)">{{ row.type }}</el-tag>
               </template>
             </el-table-column>
             <el-table-column prop="description" label="描述" />
@@ -41,8 +41,8 @@
         </el-card>
       </el-col>
 
-      <el-col :span="8">
-        <el-card>
+      <el-col :span="10" class="statistics-column">
+        <el-card class="statistics-card" shadow="never">
           <template #header>
             <span>预算统计</span>
           </template>
@@ -62,7 +62,7 @@
                 :key="type"
                 class="summary-item"
               >
-                <div class="summary-label">{{ type }}</div>
+                <div class="summary-label"><span class="summary-dot" :style="budgetTypeStyle(String(type))"></span>{{ type }}</div>
                 <div class="summary-value">¥{{ amount.toFixed(2) }}</div>
               </div>
             </div>
@@ -85,7 +85,7 @@
           <el-divider />
 
           <div class="chart-container">
-            <v-chart :option="chartOption" style="height: 300px" />
+            <v-chart :option="chartOption" class="budget-chart" autoresize />
           </div>
         </el-card>
       </el-col>
@@ -164,50 +164,77 @@ const newBudgetItem = ref<Partial<BudgetItem>>({
   currency: 'CNY'
 })
 
+const BUDGET_TYPE_COLORS: Record<BudgetItem['type'], string> = {
+  交通: '#5B6B73',
+  住宿: '#5F7267',
+  餐饮: '#A14B3C',
+  景点: '#8A8798',
+  门票: '#8A8798',
+  购物: '#B6A18A',
+  其他: '#697177'
+}
+
+function budgetTypeColor(type: string) {
+  return BUDGET_TYPE_COLORS[type as BudgetItem['type']] || BUDGET_TYPE_COLORS.其他
+}
+
+function budgetTypeStyle(type: string) {
+  return { '--budget-type-color': budgetTypeColor(type) }
+}
+
 const chartOption = computed(() => {
   const typeData = Object.entries(budgetByType.value).map(([name, value]) => ({
     name,
-    value
+    value,
+    itemStyle: { color: budgetTypeColor(name) }
   }))
 
   return {
+    color: Object.values(BUDGET_TYPE_COLORS),
     title: {
       text: '预算分布',
-      left: 'center'
+      left: 'center',
+      top: 6,
+      textStyle: {
+        color: '#1D2226',
+        fontFamily: 'MiSans, HarmonyOS Sans SC, PingFang SC, sans-serif',
+        fontSize: 12,
+        fontWeight: 560
+      }
     },
     tooltip: {
       trigger: 'item',
-      formatter: '{a} <br/>{b}: ¥{c} ({d}%)'
+      formatter: '{a} <br/>{b}: ¥{c} ({d}%)',
+      backgroundColor: 'rgba(220, 223, 222, 0.96)',
+      borderColor: 'rgba(29, 34, 38, 0.18)',
+      textStyle: { color: '#1D2226' }
     },
     series: [
       {
         name: '预算类型',
         type: 'pie',
-        radius: '60%',
+        radius: ['34%', '54%'],
+        center: ['50%', '58%'],
+        itemStyle: {
+          borderColor: '#D8DCDD',
+          borderWidth: 2
+        },
+        label: {
+          show: false
+        },
+        labelLine: { show: false },
         data: typeData,
         emphasis: {
           itemStyle: {
             shadowBlur: 10,
             shadowOffsetX: 0,
-            shadowColor: 'rgba(0, 0, 0, 0.5)'
+            shadowColor: 'rgba(29, 34, 38, 0.24)'
           }
         }
       }
     ]
   }
 })
-
-function getTypeColor(type: string) {
-  const colorMap: Record<string, string> = {
-    交通: 'primary',
-    住宿: 'success',
-    餐饮: 'warning',
-    景点: 'danger',
-    购物: 'info',
-    其他: ''
-  }
-  return colorMap[type] || ''
-}
 
 function addBudgetItem() {
   if (!newBudgetItem.value.description || !newBudgetItem.value.amount) {
@@ -243,10 +270,64 @@ function removeBudgetItem(id: string) {
 
 <style scoped>
 .budget-view {
-  padding: 20px;
-  background: #F5F5F5;
+  padding: 0;
+  background: var(--cross-canvas);
   min-height: calc(100vh - 60px);
   overflow-y: auto;
+}
+
+.budget-layout {
+  min-height: calc(100vh - 60px);
+  margin-right: 0 !important;
+}
+
+.ledger-column,
+.statistics-column {
+  padding: 34px 40px !important;
+}
+
+.statistics-column {
+  border-left: 1px solid var(--cross-ink-faint);
+}
+
+.budget-ledger,
+.statistics-card {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.budget-ledger :deep(.el-card__header),
+.statistics-card :deep(.el-card__header) {
+  padding: 12px 0 18px;
+}
+
+.budget-ledger :deep(.el-card__body) {
+  padding: 0;
+}
+
+.statistics-column {
+  min-width: 0;
+}
+
+.statistics-card :deep(.el-card__header) {
+  padding: 12px 0 16px;
+  color: var(--cross-ink);
+  font-size: 14px;
+  font-weight: 560;
+}
+
+.statistics-card {
+  min-height: 0;
+}
+
+.statistics-card :deep(.el-card__body) {
+  padding: 0;
+}
+
+.statistics-card :deep(.el-divider--horizontal) {
+  margin: 8px 0;
 }
 
 .card-header {
@@ -256,40 +337,113 @@ function removeBudgetItem(id: string) {
 }
 
 .budget-summary {
-  padding: 10px 0;
+  padding: 0;
 }
 
 .summary-item {
   display: flex;
   justify-content: space-between;
-  padding: 12px 0;
+  align-items: baseline;
+  padding: 7px 0;
+}
+
+.summary-section .summary-item {
+  border-bottom: 1px solid rgba(32, 37, 41, .16);
 }
 
 .summary-label {
-  color: #666;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #5b6b73;
+  font-size: 12px;
+}
+
+.summary-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--budget-type-color);
 }
 
 .summary-value {
-  font-weight: 600;
-  color: #333;
+  font-size: 13px;
+  font-weight: 520;
+  color: #1d2226;
 }
 
 .summary-value.total {
   font-size: 24px;
-  color: #666;
+  font-weight: 600;
+  color: var(--cross-ink);
 }
 
 .summary-section {
-  margin: 16px 0;
+  margin: 8px 0;
 }
 
 .summary-section h4 {
-  margin: 0 0 12px 0;
-  color: #333;
+  margin: 0 0 3px;
+  color: #1d2226;
+  font-size: 13px;
+  font-weight: 560;
 }
 
 .chart-container {
-  margin-top: 20px;
+  height: 250px;
+  margin-top: 10px;
+  overflow: hidden;
+}
+
+.budget-chart {
+  width: 100%;
+  height: 100%;
+}
+
+.budget-type-tag {
+  --el-tag-bg-color: transparent;
+  --el-tag-border-color: transparent;
+  --el-tag-text-color: var(--budget-type-color);
+  display: inline-flex;
+  gap: 6px;
+  border-radius: 0;
+  padding: 0;
+  color: var(--budget-type-color);
+  letter-spacing: .02em;
+}
+
+.budget-type-tag::before {
+  width: 5px;
+  height: 5px;
+  flex: 0 0 auto;
+  border-radius: 50% 44% 53% 46%;
+  background: currentColor;
+  content: '';
+  opacity: .72;
+}
+
+@media (max-width: 900px) {
+  .budget-view {
+    padding: 0;
+  }
+
+  .ledger-column,
+  .statistics-column {
+    max-width: 100%;
+    flex: 0 0 100%;
+    padding: 24px 18px !important;
+  }
+
+  .statistics-column {
+    border-top: 1px solid var(--cross-ink-faint);
+    border-left: 0;
+  }
+
+  .statistics-card {
+    min-height: 0;
+  }
+
+  .chart-container { height: 230px; }
 }
 </style>
 

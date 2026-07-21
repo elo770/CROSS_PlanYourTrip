@@ -368,7 +368,8 @@ onBeforeUnmount(() => {
 .search-input {
   flex: 1;
   padding: 10px 12px;
-  border: 1px solid #d0d0d0;
+  border: 1px solid rgba(29, 34, 38, 0.18);
+  background: #dcdfde;
   border-radius: 4px;
   font-size: 14px;
   outline: none;
@@ -376,17 +377,17 @@ onBeforeUnmount(() => {
 }
 
 .search-input:focus {
-  border-color: #409eff;
+  border-color: #5b6b73;
 }
 
 .search-input:disabled {
-  background-color: #f5f5f5;
+  background-color: #dfe2e1;
   cursor: not-allowed;
 }
 
 .search-button {
   padding: 10px 16px;
-  background-color: #409eff;
+  background-color: #5b6b73;
   color: white;
   border: none;
   border-radius: 4px;
@@ -400,11 +401,11 @@ onBeforeUnmount(() => {
 }
 
 .search-button:hover:not(:disabled) {
-  background-color: #66b1ff;
+  background-color: #6b7d86;
 }
 
 .search-button:disabled {
-  background-color: #c0c4cc;
+  background-color: #c7cdcf;
   cursor: not-allowed;
 }
 
@@ -424,10 +425,10 @@ onBeforeUnmount(() => {
   left: 0;
   right: 0;
   margin-top: 4px;
-  background-color: white;
-  border: 1px solid #d0d0d0;
+  background-color: #dcdfde;
+  border: 1px solid rgba(29, 34, 38, 0.18);
   border-radius: 4px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 12px rgba(29, 34, 38, 0.1);
   max-height: 300px;
   overflow-y: auto;
 }
@@ -442,23 +443,23 @@ onBeforeUnmount(() => {
 
 .search-loading,
 .search-empty {
-  color: #999;
+  color: rgba(29, 34, 38, 0.46);
 }
 
 .search-error {
-  color: #d03050;
-  background: #fff5f7;
+  color: #a14b3c;
+  background: #f1e6e2;
 }
 
 .search-result-item {
   padding: 12px 16px;
   cursor: pointer;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid rgba(29, 34, 38, 0.1);
   transition: background-color 0.2s;
 }
 
 .search-result-item:hover {
-  background-color: #f5f7fa;
+  background-color: #e4ebef;
 }
 
 .search-result-item:last-child {
@@ -468,13 +469,13 @@ onBeforeUnmount(() => {
 .poi-name {
   font-size: 14px;
   font-weight: 600;
-  color: #333;
+  color: #1d2226;
   margin-bottom: 4px;
 }
 
 .poi-address {
   font-size: 12px;
-  color: #666;
+  color: #5b6b73;
   margin-bottom: 4px;
 }
 
@@ -484,11 +485,11 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 8px;
   font-size: 11px;
-  color: #999;
+  color: rgba(29, 34, 38, 0.46);
 }
 
 .poi-engine {
-  color: #409eff;
+  color: #5b6b73;
   flex-shrink: 0;
 }
 

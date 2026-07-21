@@ -1,0 +1,2014 @@
+{
+  "generatedAt": "2026-07-20T06:49:23.195Z",
+  "mode": "offline",
+  "total": 80,
+  "passed": 80,
+  "rate": 1,
+  "categories": {
+    "intent": {
+      "total": 30,
+      "passed": 30,
+      "rate": 1
+    },
+    "temporal": {
+      "total": 10,
+      "passed": 10,
+      "rate": 1
+    },
+    "import": {
+      "total": 10,
+      "passed": 10,
+      "rate": 1
+    },
+    "safety": {
+      "total": 10,
+      "passed": 10,
+      "rate": 1
+    },
+    "long_trip": {
+      "total": 10,
+      "passed": 10,
+      "rate": 1
+    },
+    "outline": {
+      "total": 10,
+      "passed": 10,
+      "rate": 1
+    }
+  },
+  "results": [
+    {
+      "id": "intent-01",
+      "category": "intent",
+      "passed": true,
+      "actual": "create_plan",
+      "expected": "create_plan"
+    },
+    {
+      "id": "intent-02",
+      "category": "intent",
+      "passed": true,
+      "actual": "answer_only",
+      "expected": "answer_only"
+    },
+    {
+      "id": "intent-03",
+      "category": "intent",
+      "passed": true,
+      "actual": "modify_plan",
+      "expected": "modify_plan"
+    },
+    {
+      "id": "intent-04",
+      "category": "intent",
+      "passed": true,
+      "actual": "modify_plan",
+      "expected": "modify_plan"
+    },
+    {
+      "id": "intent-05",
+      "category": "intent",
+      "passed": true,
+      "actual": "answer_only",
+      "expected": "answer_only"
+    },
+    {
+      "id": "intent-06",
+      "category": "intent",
+      "passed": true,
+      "actual": "ask_clarification",
+      "expected": "ask_clarification"
+    },
+    {
+      "id": "intent-07",
+      "category": "intent",
+      "passed": true,
+      "actual": "ask_clarification",
+      "expected": "ask_clarification"
+    },
+    {
+      "id": "intent-08",
+      "category": "intent",
+      "passed": true,
+      "actual": "modify_plan",
+      "expected": "modify_plan"
+    },
+    {
+      "id": "intent-09",
+      "category": "intent",
+      "passed": true,
+      "actual": "modify_plan",
+      "expected": "modify_plan"
+    },
+    {
+      "id": "intent-10",
+      "category": "intent",
+      "passed": true,
+      "actual": "create_plan",
+      "expected": "create_plan"
+    },
+    {
+      "id": "time-01",
+      "category": "temporal",
+      "passed": true,
+      "actual": {
+        "duration": 3,
+        "maxHeading": 0
+      },
+      "expected": {
+        "duration": 3,
+        "maxHeading": 0
+      }
+    },
+    {
+      "id": "time-02",
+      "category": "temporal",
+      "passed": true,
+      "actual": {
+        "duration": 4,
+        "maxHeading": 0
+      },
+      "expected": {
+        "duration": 4,
+        "maxHeading": 0
+      }
+    },
+    {
+      "id": "time-03",
+      "category": "temporal",
+      "passed": true,
+      "actual": {
+        "duration": 0,
+        "maxHeading": 2
+      },
+      "expected": {
+        "duration": 0,
+        "maxHeading": 2
+      }
+    },
+    {
+      "id": "time-04",
+      "category": "temporal",
+      "passed": true,
+      "actual": {
+        "duration": 0,
+        "maxHeading": 4
+      },
+      "expected": {
+        "duration": 0,
+        "maxHeading": 4
+      }
+    },
+    {
+      "id": "time-05",
+      "category": "temporal",
+      "passed": true,
+      "actual": {
+        "duration": 14,
+        "maxHeading": 0
+      },
+      "expected": {
+        "duration": 14,
+        "maxHeading": 0
+      }
+    },
+    {
+      "id": "time-06",
+      "category": "temporal",
+      "passed": true,
+      "actual": {
+        "duration": 14,
+        "maxHeading": 0
+      },
+      "expected": {
+        "duration": 14,
+        "maxHeading": 0
+      }
+    },
+    {
+      "id": "time-07",
+      "category": "temporal",
+      "passed": true,
+      "actual": {
+        "duration": 0,
+        "maxHeading": 2
+      },
+      "expected": {
+        "duration": 0,
+        "maxHeading": 2
+      }
+    },
+    {
+      "id": "time-08",
+      "category": "temporal",
+      "passed": true,
+      "actual": {
+        "duration": 2,
+        "maxHeading": 0
+      },
+      "expected": {
+        "duration": 2,
+        "maxHeading": 0
+      }
+    },
+    {
+      "id": "time-09",
+      "category": "temporal",
+      "passed": true,
+      "actual": {
+        "duration": 4,
+        "maxHeading": 2
+      },
+      "expected": {
+        "duration": 4,
+        "maxHeading": 2
+      }
+    },
+    {
+      "id": "time-10",
+      "category": "temporal",
+      "passed": true,
+      "actual": {
+        "duration": 5,
+        "maxHeading": 0
+      },
+      "expected": {
+        "duration": 5,
+        "maxHeading": 0
+      }
+    },
+    {
+      "id": "import-01",
+      "category": "import",
+      "passed": true,
+      "actual": {
+        "days": [
+          1,
+          2
+        ],
+        "items": [
+          [
+            "西湖",
+            "poi",
+            1
+          ],
+          [
+            "雷峰塔",
+            "poi",
+            1
+          ],
+          [
+            "灵隐寺",
+            "poi",
+            2
+          ]
+        ],
+        "errors": [],
+        "warnings": [],
+        "diagnostics": {
+          "overall": "轻松",
+          "byDay": [
+            {
+              "day": 1,
+              "activityCount": 2,
+              "detectedPace": "轻松"
+            },
+            {
+              "day": 2,
+              "activityCount": 1,
+              "detectedPace": "轻松"
+            }
+          ]
+        }
+      },
+      "expected": {
+        "days": [
+          1,
+          2
+        ],
+        "relations": [
+          [
+            "西湖",
+            1
+          ],
+          [
+            "雷峰塔",
+            1
+          ],
+          [
+            "灵隐寺",
+            2
+          ]
+        ],
+        "errors": 0
+      }
+    },
+    {
+      "id": "import-02",
+      "category": "import",
+      "passed": true,
+      "actual": {
+        "days": [
+          1,
+          2,
+          3,
+          4
+        ],
+        "items": [
+          [
+            "中山陵",
+            "poi",
+            1
+          ],
+          [
+            "总统府",
+            "poi",
+            2
+          ],
+          [
+            "瞻园",
+            "poi",
+            3
+          ],
+          [
+            "购买伴手礼",
+            "shopping",
+            4
+          ],
+          [
+            "返程",
+            "transport",
+            4
+          ]
+        ],
+        "errors": [],
+        "warnings": [],
+        "diagnostics": {
+          "overall": "轻松",
+          "byDay": [
+            {
+              "day": 1,
+              "activityCount": 1,
+              "detectedPace": "轻松"
+            },
+            {
+              "day": 2,
+              "activityCount": 1,
+              "detectedPace": "轻松"
+            },
+            {
+              "day": 3,
+              "activityCount": 1,
+              "detectedPace": "轻松"
+            },
+            {
+              "day": 4,
+              "activityCount": 2,
+              "detectedPace": "轻松"
+            }
+          ]
+        }
+      },
+      "expected": {
+        "days": [
+          1,
+          2,
+          3,
+          4
+        ],
+        "types": [
+          [
+            "购买伴手礼",
+            "shopping"
+          ],
+          [
+            "返程",
+            "transport"
+          ]
+        ],
+        "errors": 0
+      }
+    },
+    {
+      "id": "import-03",
+      "category": "import",
+      "passed": true,
+      "actual": {
+        "days": [
+          1,
+          3
+        ],
+        "items": [
+          [
+            "西湖",
+            "poi",
+            1
+          ],
+          [
+            "灵隐寺",
+            "poi",
+            3
+          ]
+        ],
+        "errors": [],
+        "warnings": [
+          "原文没有第 2 天，已保留为空白日期。"
+        ],
+        "diagnostics": {
+          "overall": "轻松",
+          "byDay": [
+            {
+              "day": 1,
+              "activityCount": 1,
+              "detectedPace": "轻松"
+            },
+            {
+              "day": 2,
+              "activityCount": 0,
+              "detectedPace": "轻松"
+            },
+            {
+              "day": 3,
+              "activityCount": 1,
+              "detectedPace": "轻松"
+            }
+          ]
+        }
+      },
+      "expected": {
+        "days": [
+          1,
+          3
+        ],
+        "warningIncludes": "没有第 2 天",
+        "errors": 0
+      }
+    },
+    {
+      "id": "import-04",
+      "category": "import",
+      "passed": true,
+      "actual": {
+        "days": [
+          1,
+          1
+        ],
+        "items": [
+          [
+            "西湖",
+            "poi",
+            1
+          ],
+          [
+            "雷峰塔",
+            "poi",
+            1
+          ]
+        ],
+        "errors": [
+          "第 1 天出现了重复标题。"
+        ],
+        "warnings": [],
+        "diagnostics": {
+          "overall": "轻松",
+          "byDay": [
+            {
+              "day": 1,
+              "activityCount": 2,
+              "detectedPace": "轻松"
+            }
+          ]
+        }
+      },
+      "expected": {
+        "days": [
+          1,
+          1
+        ],
+        "errorIncludes": "重复标题"
+      }
+    },
+    {
+      "id": "import-05",
+      "category": "import",
+      "passed": true,
+      "actual": {
+        "days": [
+          1,
+          2
+        ],
+        "items": [
+          [
+            "西湖",
+            "poi",
+            1
+          ]
+        ],
+        "errors": [
+          "第 2 天没有识别出任何活动。"
+        ],
+        "warnings": [],
+        "diagnostics": {
+          "overall": "轻松",
+          "byDay": [
+            {
+              "day": 1,
+              "activityCount": 1,
+              "detectedPace": "轻松"
+            },
+            {
+              "day": 2,
+              "activityCount": 0,
+              "detectedPace": "轻松"
+            }
+          ]
+        }
+      },
+      "expected": {
+        "days": [
+          1,
+          2
+        ],
+        "errorIncludes": "第 2 天没有识别出任何活动"
+      }
+    },
+    {
+      "id": "import-06",
+      "category": "import",
+      "passed": true,
+      "actual": {
+        "days": [
+          1,
+          2
+        ],
+        "items": [
+          [
+            "河坊街晚饭",
+            "food",
+            1
+          ],
+          [
+            "乘坐高铁返程",
+            "transport",
+            2
+          ]
+        ],
+        "errors": [],
+        "warnings": [],
+        "diagnostics": {
+          "overall": "轻松",
+          "byDay": [
+            {
+              "day": 1,
+              "activityCount": 1,
+              "detectedPace": "轻松"
+            },
+            {
+              "day": 2,
+              "activityCount": 1,
+              "detectedPace": "轻松"
+            }
+          ]
+        }
+      },
+      "expected": {
+        "days": [
+          1,
+          2
+        ],
+        "types": [
+          [
+            "河坊街晚饭",
+            "food"
+          ],
+          [
+            "乘坐高铁返程",
+            "transport"
+          ]
+        ],
+        "errors": 0
+      }
+    },
+    {
+      "id": "import-07",
+      "category": "import",
+      "passed": true,
+      "actual": {
+        "days": [
+          1,
+          2
+        ],
+        "items": [
+          [
+            "西湖",
+            "poi",
+            1
+          ],
+          [
+            "下午自由活动",
+            "note",
+            1
+          ],
+          [
+            "灵隐寺",
+            "poi",
+            2
+          ]
+        ],
+        "errors": [],
+        "warnings": [],
+        "diagnostics": {
+          "overall": "轻松",
+          "byDay": [
+            {
+              "day": 1,
+              "activityCount": 1,
+              "detectedPace": "轻松"
+            },
+            {
+              "day": 2,
+              "activityCount": 1,
+              "detectedPace": "轻松"
+            }
+          ]
+        }
+      },
+      "expected": {
+        "days": [
+          1,
+          2
+        ],
+        "types": [
+          [
+            "下午自由活动",
+            "note"
+          ]
+        ],
+        "errors": 0
+      }
+    },
+    {
+      "id": "import-08",
+      "category": "import",
+      "passed": true,
+      "actual": {
+        "days": [
+          1,
+          2
+        ],
+        "items": [
+          [
+            "外滩",
+            "poi",
+            1
+          ],
+          [
+            "武康路",
+            "poi",
+            2
+          ]
+        ],
+        "errors": [],
+        "warnings": [],
+        "diagnostics": {
+          "overall": "轻松",
+          "byDay": [
+            {
+              "day": 1,
+              "activityCount": 1,
+              "detectedPace": "轻松"
+            },
+            {
+              "day": 2,
+              "activityCount": 1,
+              "detectedPace": "轻松"
+            }
+          ]
+        }
+      },
+      "expected": {
+        "days": [
+          1,
+          2
+        ],
+        "relations": [
+          [
+            "外滩",
+            1
+          ],
+          [
+            "武康路",
+            2
+          ]
+        ],
+        "errors": 0
+      }
+    },
+    {
+      "id": "import-09",
+      "category": "import",
+      "passed": true,
+      "actual": {
+        "days": [
+          1,
+          2
+        ],
+        "items": [
+          [
+            "西湖",
+            "poi",
+            1
+          ],
+          [
+            "雷峰塔",
+            "poi",
+            1
+          ],
+          [
+            "河坊街",
+            "poi",
+            1
+          ],
+          [
+            "博物馆",
+            "poi",
+            1
+          ],
+          [
+            "夜游",
+            "note",
+            1
+          ],
+          [
+            "灵隐寺",
+            "poi",
+            2
+          ]
+        ],
+        "errors": [],
+        "warnings": [],
+        "diagnostics": {
+          "overall": "适中",
+          "byDay": [
+            {
+              "day": 1,
+              "activityCount": 4,
+              "detectedPace": "适中"
+            },
+            {
+              "day": 2,
+              "activityCount": 1,
+              "detectedPace": "轻松"
+            }
+          ]
+        }
+      },
+      "expected": {
+        "days": [
+          1,
+          2
+        ],
+        "detectedPaceDay": [
+          1,
+          "适中"
+        ],
+        "errors": 0
+      }
+    },
+    {
+      "id": "import-10",
+      "category": "import",
+      "passed": true,
+      "actual": {
+        "days": [
+          1,
+          2
+        ],
+        "items": [
+          [
+            "西湖",
+            "poi",
+            1
+          ],
+          [
+            "灵隐寺",
+            "poi",
+            2
+          ]
+        ],
+        "errors": [],
+        "warnings": [],
+        "diagnostics": {
+          "overall": "轻松",
+          "byDay": [
+            {
+              "day": 1,
+              "activityCount": 1,
+              "detectedPace": "轻松"
+            },
+            {
+              "day": 2,
+              "activityCount": 1,
+              "detectedPace": "轻松"
+            }
+          ]
+        }
+      },
+      "expected": {
+        "days": [
+          1,
+          2
+        ],
+        "relations": [
+          [
+            "西湖",
+            1
+          ],
+          [
+            "灵隐寺",
+            2
+          ]
+        ],
+        "errors": 0
+      }
+    },
+    {
+      "id": "safety-01",
+      "category": "safety",
+      "passed": true,
+      "actual": {
+        "places": [
+          {
+            "id": "p1",
+            "name": "中山陵",
+            "day": 1,
+            "withinDayOrder": 1,
+            "coordinates": [
+              118.85,
+              32.06
+            ],
+            "planningStatus": "scheduled",
+            "locked": true,
+            "order": 1,
+            "date": "2026-07-19T16:00:00.000Z"
+          },
+          {
+            "id": "p2",
+            "name": "明孝陵",
+            "day": 1,
+            "withinDayOrder": 2,
+            "coordinates": [
+              118.84,
+              32.05
+            ],
+            "planningStatus": "scheduled",
+            "locked": true,
+            "order": 2,
+            "date": "2026-07-19T16:00:00.000Z"
+          },
+          {
+            "id": "p3",
+            "name": "总统府",
+            "day": 2,
+            "withinDayOrder": 1,
+            "coordinates": [
+              118.79,
+              32.04
+            ],
+            "planningStatus": "scheduled",
+            "poiStatus": "must_go",
+            "order": 3,
+            "date": "2026-07-20T16:00:00.000Z"
+          },
+          {
+            "id": "p4",
+            "name": "夫子庙",
+            "day": 2,
+            "withinDayOrder": 2,
+            "coordinates": [
+              118.79,
+              32.02
+            ],
+            "planningStatus": "scheduled",
+            "order": 4,
+            "date": "2026-07-20T16:00:00.000Z"
+          },
+          {
+            "id": "p5",
+            "name": "秦淮河",
+            "day": 2,
+            "withinDayOrder": 3,
+            "coordinates": [
+              118.8,
+              32.02
+            ],
+            "planningStatus": "scheduled",
+            "order": 5,
+            "date": "2026-07-20T16:00:00.000Z"
+          },
+          {
+            "id": "p6",
+            "name": "老门东",
+            "day": 2,
+            "withinDayOrder": 4,
+            "coordinates": [
+              118.79,
+              32.01
+            ],
+            "planningStatus": "scheduled",
+            "order": 6,
+            "date": "2026-07-20T16:00:00.000Z"
+          },
+          {
+            "id": "p7",
+            "name": "瞻园",
+            "day": 2,
+            "withinDayOrder": 5,
+            "coordinates": [
+              118.78,
+              32.02
+            ],
+            "planningStatus": "scheduled",
+            "order": 7,
+            "date": "2026-07-20T16:00:00.000Z"
+          }
+        ],
+        "changes": [
+          {
+            "type": "lock_poi",
+            "message": "已保留并锁定：明孝陵"
+          }
+        ],
+        "warnings": []
+      },
+      "expected": {
+        "place": [
+          "p2",
+          "locked",
+          true
+        ]
+      }
+    },
+    {
+      "id": "safety-02",
+      "category": "safety",
+      "passed": true,
+      "actual": {
+        "places": [
+          {
+            "id": "p1",
+            "name": "中山陵",
+            "day": 1,
+            "withinDayOrder": 1,
+            "coordinates": [
+              118.85,
+              32.06
+            ],
+            "planningStatus": "scheduled",
+            "locked": false,
+            "order": 1,
+            "date": "2026-07-19T16:00:00.000Z"
+          },
+          {
+            "id": "p2",
+            "name": "明孝陵",
+            "day": 1,
+            "withinDayOrder": 2,
+            "coordinates": [
+              118.84,
+              32.05
+            ],
+            "planningStatus": "scheduled",
+            "order": 2,
+            "date": "2026-07-19T16:00:00.000Z"
+          },
+          {
+            "id": "p3",
+            "name": "总统府",
+            "day": 2,
+            "withinDayOrder": 1,
+            "coordinates": [
+              118.79,
+              32.04
+            ],
+            "planningStatus": "scheduled",
+            "poiStatus": "must_go",
+            "order": 3,
+            "date": "2026-07-20T16:00:00.000Z"
+          },
+          {
+            "id": "p4",
+            "name": "夫子庙",
+            "day": 2,
+            "withinDayOrder": 2,
+            "coordinates": [
+              118.79,
+              32.02
+            ],
+            "planningStatus": "scheduled",
+            "order": 4,
+            "date": "2026-07-20T16:00:00.000Z"
+          },
+          {
+            "id": "p5",
+            "name": "秦淮河",
+            "day": 2,
+            "withinDayOrder": 3,
+            "coordinates": [
+              118.8,
+              32.02
+            ],
+            "planningStatus": "scheduled",
+            "order": 5,
+            "date": "2026-07-20T16:00:00.000Z"
+          },
+          {
+            "id": "p6",
+            "name": "老门东",
+            "day": 2,
+            "withinDayOrder": 4,
+            "coordinates": [
+              118.79,
+              32.01
+            ],
+            "planningStatus": "scheduled",
+            "order": 6,
+            "date": "2026-07-20T16:00:00.000Z"
+          },
+          {
+            "id": "p7",
+            "name": "瞻园",
+            "day": 2,
+            "withinDayOrder": 5,
+            "coordinates": [
+              118.78,
+              32.02
+            ],
+            "planningStatus": "scheduled",
+            "order": 7,
+            "date": "2026-07-20T16:00:00.000Z"
+          }
+        ],
+        "changes": [
+          {
+            "type": "unlock_poi",
+            "message": "已解除锁定：中山陵"
+          }
+        ],
+        "warnings": []
+      },
+      "expected": {
+        "place": [
+          "p1",
+          "locked",
+          false
+        ]
+      }
+    },
+    {
+      "id": "safety-03",
+      "category": "safety",
+      "passed": true,
+      "actual": {
+        "places": [
+          {
+            "id": "p1",
+            "name": "中山陵",
+            "day": 1,
+            "withinDayOrder": 1,
+            "coordinates": [
+              118.85,
+              32.06
+            ],
+            "planningStatus": "scheduled",
+            "locked": true,
+            "order": 1,
+            "date": "2026-07-19T16:00:00.000Z"
+          },
+          {
+            "id": "p3",
+            "name": "总统府",
+            "day": 2,
+            "withinDayOrder": 1,
+            "coordinates": [
+              118.79,
+              32.04
+            ],
+            "planningStatus": "scheduled",
+            "poiStatus": "must_go",
+            "order": 2,
+            "date": "2026-07-20T16:00:00.000Z"
+          },
+          {
+            "id": "p4",
+            "name": "夫子庙",
+            "day": 2,
+            "withinDayOrder": 2,
+            "coordinates": [
+              118.79,
+              32.02
+            ],
+            "planningStatus": "scheduled",
+            "order": 3,
+            "date": "2026-07-20T16:00:00.000Z"
+          },
+          {
+            "id": "p5",
+            "name": "秦淮河",
+            "day": 2,
+            "withinDayOrder": 3,
+            "coordinates": [
+              118.8,
+              32.02
+            ],
+            "planningStatus": "scheduled",
+            "order": 4,
+            "date": "2026-07-20T16:00:00.000Z"
+          },
+          {
+            "id": "p6",
+            "name": "老门东",
+            "day": 2,
+            "withinDayOrder": 4,
+            "coordinates": [
+              118.79,
+              32.01
+            ],
+            "planningStatus": "scheduled",
+            "order": 5,
+            "date": "2026-07-20T16:00:00.000Z"
+          },
+          {
+            "id": "p7",
+            "name": "瞻园",
+            "day": 2,
+            "withinDayOrder": 5,
+            "coordinates": [
+              118.78,
+              32.02
+            ],
+            "planningStatus": "scheduled",
+            "order": 6,
+            "date": "2026-07-20T16:00:00.000Z"
+          }
+        ],
+        "changes": [
+          {
+            "type": "remove_poi",
+            "message": "已移除：明孝陵"
+          }
+        ],
+        "warnings": []
+      },
+      "expected": {
+        "absent": "p2"
+      }
+    },
+    {
+      "id": "safety-04",
+      "category": "safety",
+      "passed": true,
+      "actual": {
+        "error": "“中山陵”已锁定或属于必去地点，不能直接删除。"
+      },
+      "expected": {
+        "rejectIncludes": "不能直接删除"
+      }
+    },
+    {
+      "id": "safety-05",
+      "category": "safety",
+      "passed": true,
+      "actual": {
+        "error": "“总统府”已锁定或属于必去地点，不能直接删除。"
+      },
+      "expected": {
+        "rejectIncludes": "不能直接删除"
+      }
+    },
+    {
+      "id": "safety-06",
+      "category": "safety",
+      "passed": true,
+      "actual": {
+        "places": [
+          {
+            "id": "p1",
+            "name": "中山陵",
+            "day": 1,
+            "withinDayOrder": 1,
+            "coordinates": [
+              118.85,
+              32.06
+            ],
+            "planningStatus": "scheduled",
+            "locked": true,
+            "order": 1,
+            "date": "2026-07-19T16:00:00.000Z"
+          },
+          {
+            "id": "p3",
+            "name": "总统府",
+            "day": 2,
+            "withinDayOrder": 1,
+            "coordinates": [
+              118.79,
+              32.04
+            ],
+            "planningStatus": "scheduled",
+            "poiStatus": "must_go",
+            "order": 2,
+            "date": "2026-07-20T16:00:00.000Z"
+          },
+          {
+            "id": "p4",
+            "name": "夫子庙",
+            "day": 2,
+            "withinDayOrder": 2,
+            "coordinates": [
+              118.79,
+              32.02
+            ],
+            "planningStatus": "scheduled",
+            "order": 3,
+            "date": "2026-07-20T16:00:00.000Z"
+          },
+          {
+            "id": "p5",
+            "name": "秦淮河",
+            "day": 2,
+            "withinDayOrder": 3,
+            "coordinates": [
+              118.8,
+              32.02
+            ],
+            "planningStatus": "scheduled",
+            "order": 4,
+            "date": "2026-07-20T16:00:00.000Z"
+          },
+          {
+            "id": "p6",
+            "name": "老门东",
+            "day": 2,
+            "withinDayOrder": 4,
+            "coordinates": [
+              118.79,
+              32.01
+            ],
+            "planningStatus": "scheduled",
+            "order": 5,
+            "date": "2026-07-20T16:00:00.000Z"
+          },
+          {
+            "id": "p7",
+            "name": "瞻园",
+            "day": 2,
+            "withinDayOrder": 5,
+            "coordinates": [
+              118.78,
+              32.02
+            ],
+            "planningStatus": "scheduled",
+            "order": 6,
+            "date": "2026-07-20T16:00:00.000Z"
+          },
+          {
+            "id": "p2",
+            "name": "明孝陵",
+            "day": 3,
+            "withinDayOrder": 1,
+            "coordinates": [
+              118.84,
+              32.05
+            ],
+            "planningStatus": "scheduled",
+            "order": 7,
+            "date": "2026-07-21T16:00:00.000Z"
+          }
+        ],
+        "changes": [
+          {
+            "type": "move_poi",
+            "message": "已将 明孝陵 移至第 3 天"
+          }
+        ],
+        "warnings": []
+      },
+      "expected": {
+        "place": [
+          "p2",
+          "day",
+          3
+        ],
+        "unchanged": [
+          "p3",
+          2
+        ]
+      }
+    },
+    {
+      "id": "safety-07",
+      "category": "safety",
+      "passed": true,
+      "actual": {
+        "places": [
+          {
+            "id": "p2",
+            "name": "明孝陵",
+            "day": 1,
+            "withinDayOrder": 1,
+            "coordinates": [
+              118.84,
+              32.05
+            ],
+            "planningStatus": "scheduled",
+            "order": 1,
+            "date": "2026-07-19T16:00:00.000Z"
+          },
+          {
+            "id": "p1",
+            "name": "中山陵",
+            "day": 1,
+            "withinDayOrder": 2,
+            "coordinates": [
+              118.85,
+              32.06
+            ],
+            "planningStatus": "scheduled",
+            "locked": true,
+            "order": 2,
+            "date": "2026-07-19T16:00:00.000Z"
+          },
+          {
+            "id": "p3",
+            "name": "总统府",
+            "day": 2,
+            "withinDayOrder": 1,
+            "coordinates": [
+              118.79,
+              32.04
+            ],
+            "planningStatus": "scheduled",
+            "poiStatus": "must_go",
+            "order": 3,
+            "date": "2026-07-20T16:00:00.000Z"
+          },
+          {
+            "id": "p4",
+            "name": "夫子庙",
+            "day": 2,
+            "withinDayOrder": 2,
+            "coordinates": [
+              118.79,
+              32.02
+            ],
+            "planningStatus": "scheduled",
+            "order": 4,
+            "date": "2026-07-20T16:00:00.000Z"
+          },
+          {
+            "id": "p5",
+            "name": "秦淮河",
+            "day": 2,
+            "withinDayOrder": 3,
+            "coordinates": [
+              118.8,
+              32.02
+            ],
+            "planningStatus": "scheduled",
+            "order": 5,
+            "date": "2026-07-20T16:00:00.000Z"
+          },
+          {
+            "id": "p6",
+            "name": "老门东",
+            "day": 2,
+            "withinDayOrder": 4,
+            "coordinates": [
+              118.79,
+              32.01
+            ],
+            "planningStatus": "scheduled",
+            "order": 6,
+            "date": "2026-07-20T16:00:00.000Z"
+          },
+          {
+            "id": "p7",
+            "name": "瞻园",
+            "day": 2,
+            "withinDayOrder": 5,
+            "coordinates": [
+              118.78,
+              32.02
+            ],
+            "planningStatus": "scheduled",
+            "order": 7,
+            "date": "2026-07-20T16:00:00.000Z"
+          }
+        ],
+        "changes": [
+          {
+            "type": "reorder_poi",
+            "message": "已调整 明孝陵 的日内顺序"
+          }
+        ],
+        "warnings": []
+      },
+      "expected": {
+        "place": [
+          "p2",
+          "withinDayOrder",
+          1
+        ]
+      }
+    },
+    {
+      "id": "safety-08",
+      "category": "safety",
+      "passed": true,
+      "actual": {
+        "places": [
+          {
+            "id": "p1",
+            "name": "中山陵",
+            "day": 1,
+            "withinDayOrder": 1,
+            "coordinates": [
+              118.85,
+              32.06
+            ],
+            "planningStatus": "scheduled",
+            "locked": true,
+            "order": 1,
+            "date": "2026-07-19T16:00:00.000Z"
+          },
+          {
+            "id": "p2",
+            "name": "明孝陵",
+            "day": 1,
+            "withinDayOrder": 2,
+            "coordinates": [
+              118.84,
+              32.05
+            ],
+            "planningStatus": "scheduled",
+            "order": 2,
+            "date": "2026-07-19T16:00:00.000Z"
+          },
+          {
+            "id": "p3",
+            "name": "总统府",
+            "day": 2,
+            "withinDayOrder": 1,
+            "coordinates": [
+              118.79,
+              32.04
+            ],
+            "planningStatus": "scheduled",
+            "poiStatus": "must_go",
+            "order": 3,
+            "date": "2026-07-20T16:00:00.000Z"
+          },
+          {
+            "id": "p4",
+            "name": "夫子庙",
+            "day": 2,
+            "withinDayOrder": 2,
+            "coordinates": [
+              118.79,
+              32.02
+            ],
+            "planningStatus": "scheduled",
+            "order": 4,
+            "date": "2026-07-20T16:00:00.000Z"
+          },
+          {
+            "id": "p5",
+            "name": "秦淮河",
+            "day": 2,
+            "withinDayOrder": 3,
+            "coordinates": [
+              118.8,
+              32.02
+            ],
+            "planningStatus": "scheduled",
+            "order": 5,
+            "date": "2026-07-20T16:00:00.000Z"
+          },
+          {
+            "id": "p6",
+            "name": "老门东",
+            "coordinates": [
+              118.79,
+              32.01
+            ],
+            "planningStatus": "unscheduled",
+            "order": 6
+          },
+          {
+            "id": "p7",
+            "name": "瞻园",
+            "coordinates": [
+              118.78,
+              32.02
+            ],
+            "planningStatus": "unscheduled",
+            "order": 7
+          }
+        ],
+        "changes": [
+          {
+            "type": "change_day_pace",
+            "message": "已将 瞻园 移到待规划，使第 2 天更轻松"
+          },
+          {
+            "type": "change_day_pace",
+            "message": "已将 老门东 移到待规划，使第 2 天更轻松"
+          }
+        ],
+        "warnings": []
+      },
+      "expected": {
+        "scheduledOnDay": [
+          2,
+          3
+        ],
+        "present": "p3"
+      }
+    },
+    {
+      "id": "safety-09",
+      "category": "safety",
+      "passed": true,
+      "actual": {
+        "error": "目标日期超出当前行程范围。"
+      },
+      "expected": {
+        "rejectIncludes": "目标日期超出"
+      }
+    },
+    {
+      "id": "safety-10",
+      "category": "safety",
+      "passed": true,
+      "actual": {
+        "places": [
+          {
+            "id": "p1",
+            "name": "中山陵",
+            "day": 1,
+            "withinDayOrder": 1,
+            "coordinates": [
+              118.85,
+              32.06
+            ],
+            "planningStatus": "scheduled",
+            "locked": true,
+            "order": 1,
+            "date": "2026-07-19T16:00:00.000Z"
+          },
+          {
+            "id": "r1",
+            "name": "玄武湖",
+            "coordinates": [
+              118.8,
+              32.07
+            ],
+            "day": 1,
+            "withinDayOrder": 2,
+            "planningStatus": "scheduled",
+            "order": 2,
+            "date": "2026-07-19T16:00:00.000Z"
+          },
+          {
+            "id": "p3",
+            "name": "总统府",
+            "day": 2,
+            "withinDayOrder": 1,
+            "coordinates": [
+              118.79,
+              32.04
+            ],
+            "planningStatus": "scheduled",
+            "poiStatus": "must_go",
+            "order": 3,
+            "date": "2026-07-20T16:00:00.000Z"
+          },
+          {
+            "id": "p4",
+            "name": "夫子庙",
+            "day": 2,
+            "withinDayOrder": 2,
+            "coordinates": [
+              118.79,
+              32.02
+            ],
+            "planningStatus": "scheduled",
+            "order": 4,
+            "date": "2026-07-20T16:00:00.000Z"
+          },
+          {
+            "id": "p5",
+            "name": "秦淮河",
+            "day": 2,
+            "withinDayOrder": 3,
+            "coordinates": [
+              118.8,
+              32.02
+            ],
+            "planningStatus": "scheduled",
+            "order": 5,
+            "date": "2026-07-20T16:00:00.000Z"
+          },
+          {
+            "id": "p6",
+            "name": "老门东",
+            "day": 2,
+            "withinDayOrder": 4,
+            "coordinates": [
+              118.79,
+              32.01
+            ],
+            "planningStatus": "scheduled",
+            "order": 6,
+            "date": "2026-07-20T16:00:00.000Z"
+          },
+          {
+            "id": "p7",
+            "name": "瞻园",
+            "day": 2,
+            "withinDayOrder": 5,
+            "coordinates": [
+              118.78,
+              32.02
+            ],
+            "planningStatus": "scheduled",
+            "order": 7,
+            "date": "2026-07-20T16:00:00.000Z"
+          }
+        ],
+        "changes": [
+          {
+            "type": "replace_poi",
+            "message": "已将 明孝陵 替换为 玄武湖"
+          }
+        ],
+        "warnings": []
+      },
+      "expected": {
+        "present": "r1",
+        "absent": "p2"
+      }
+    },
+    {
+      "id": "harness-answer-1",
+      "category": "intent",
+      "passed": true,
+      "actual": "answer_only",
+      "expected": "answer_only"
+    },
+    {
+      "id": "harness-answer-2",
+      "category": "intent",
+      "passed": true,
+      "actual": "answer_only",
+      "expected": "answer_only"
+    },
+    {
+      "id": "harness-answer-3",
+      "category": "intent",
+      "passed": true,
+      "actual": "answer_only",
+      "expected": "answer_only"
+    },
+    {
+      "id": "harness-answer-4",
+      "category": "intent",
+      "passed": true,
+      "actual": "answer_only",
+      "expected": "answer_only"
+    },
+    {
+      "id": "harness-answer-5",
+      "category": "intent",
+      "passed": true,
+      "actual": "answer_only",
+      "expected": "answer_only"
+    },
+    {
+      "id": "harness-answer-6",
+      "category": "intent",
+      "passed": true,
+      "actual": "answer_only",
+      "expected": "answer_only"
+    },
+    {
+      "id": "harness-answer-7",
+      "category": "intent",
+      "passed": true,
+      "actual": "answer_only",
+      "expected": "answer_only"
+    },
+    {
+      "id": "harness-answer-8",
+      "category": "intent",
+      "passed": true,
+      "actual": "answer_only",
+      "expected": "answer_only"
+    },
+    {
+      "id": "harness-answer-9",
+      "category": "intent",
+      "passed": true,
+      "actual": "answer_only",
+      "expected": "answer_only"
+    },
+    {
+      "id": "harness-answer-10",
+      "category": "intent",
+      "passed": true,
+      "actual": "answer_only",
+      "expected": "answer_only"
+    },
+    {
+      "id": "harness-modify-1",
+      "category": "intent",
+      "passed": true,
+      "actual": "modify_plan",
+      "expected": "modify_plan"
+    },
+    {
+      "id": "harness-modify-2",
+      "category": "intent",
+      "passed": true,
+      "actual": "modify_plan",
+      "expected": "modify_plan"
+    },
+    {
+      "id": "harness-modify-3",
+      "category": "intent",
+      "passed": true,
+      "actual": "modify_plan",
+      "expected": "modify_plan"
+    },
+    {
+      "id": "harness-modify-4",
+      "category": "intent",
+      "passed": true,
+      "actual": "modify_plan",
+      "expected": "modify_plan"
+    },
+    {
+      "id": "harness-modify-5",
+      "category": "intent",
+      "passed": true,
+      "actual": "modify_plan",
+      "expected": "modify_plan"
+    },
+    {
+      "id": "harness-modify-6",
+      "category": "intent",
+      "passed": true,
+      "actual": "modify_plan",
+      "expected": "modify_plan"
+    },
+    {
+      "id": "harness-modify-7",
+      "category": "intent",
+      "passed": true,
+      "actual": "modify_plan",
+      "expected": "modify_plan"
+    },
+    {
+      "id": "harness-modify-8",
+      "category": "intent",
+      "passed": true,
+      "actual": "modify_plan",
+      "expected": "modify_plan"
+    },
+    {
+      "id": "harness-modify-9",
+      "category": "intent",
+      "passed": true,
+      "actual": "modify_plan",
+      "expected": "modify_plan"
+    },
+    {
+      "id": "harness-modify-10",
+      "category": "intent",
+      "passed": true,
+      "actual": "modify_plan",
+      "expected": "modify_plan"
+    },
+    {
+      "id": "harness-long-1",
+      "category": "long_trip",
+      "passed": true,
+      "actual": 15,
+      "expected": 15
+    },
+    {
+      "id": "harness-long-2",
+      "category": "long_trip",
+      "passed": true,
+      "actual": 16,
+      "expected": 16
+    },
+    {
+      "id": "harness-long-3",
+      "category": "long_trip",
+      "passed": true,
+      "actual": 18,
+      "expected": 18
+    },
+    {
+      "id": "harness-long-4",
+      "category": "long_trip",
+      "passed": true,
+      "actual": 20,
+      "expected": 20
+    },
+    {
+      "id": "harness-long-5",
+      "category": "long_trip",
+      "passed": true,
+      "actual": 21,
+      "expected": 21
+    },
+    {
+      "id": "harness-long-6",
+      "category": "long_trip",
+      "passed": true,
+      "actual": 25,
+      "expected": 25
+    },
+    {
+      "id": "harness-long-7",
+      "category": "long_trip",
+      "passed": true,
+      "actual": 30,
+      "expected": 30
+    },
+    {
+      "id": "harness-long-8",
+      "category": "long_trip",
+      "passed": true,
+      "actual": 35,
+      "expected": 35
+    },
+    {
+      "id": "harness-long-9",
+      "category": "long_trip",
+      "passed": true,
+      "actual": 45,
+      "expected": 45
+    },
+    {
+      "id": "harness-long-10",
+      "category": "long_trip",
+      "passed": true,
+      "actual": 60,
+      "expected": 60
+    },
+    {
+      "id": "harness-outline-1",
+      "category": "outline",
+      "passed": true,
+      "actual": {
+        "totalDays": 15,
+        "segmentCount": 3,
+        "errors": []
+      },
+      "expected": {
+        "totalDays": 15,
+        "segmentCount": 3
+      }
+    },
+    {
+      "id": "harness-outline-2",
+      "category": "outline",
+      "passed": true,
+      "actual": {
+        "totalDays": 16,
+        "segmentCount": 3,
+        "errors": []
+      },
+      "expected": {
+        "totalDays": 16,
+        "segmentCount": 3
+      }
+    },
+    {
+      "id": "harness-outline-3",
+      "category": "outline",
+      "passed": true,
+      "actual": {
+        "totalDays": 18,
+        "segmentCount": 3,
+        "errors": []
+      },
+      "expected": {
+        "totalDays": 18,
+        "segmentCount": 3
+      }
+    },
+    {
+      "id": "harness-outline-4",
+      "category": "outline",
+      "passed": true,
+      "actual": {
+        "totalDays": 20,
+        "segmentCount": 3,
+        "errors": []
+      },
+      "expected": {
+        "totalDays": 20,
+        "segmentCount": 3
+      }
+    },
+    {
+      "id": "harness-outline-5",
+      "category": "outline",
+      "passed": true,
+      "actual": {
+        "totalDays": 21,
+        "segmentCount": 3,
+        "errors": []
+      },
+      "expected": {
+        "totalDays": 21,
+        "segmentCount": 3
+      }
+    },
+    {
+      "id": "harness-outline-6",
+      "category": "outline",
+      "passed": true,
+      "actual": {
+        "totalDays": 25,
+        "segmentCount": 3,
+        "errors": []
+      },
+      "expected": {
+        "totalDays": 25,
+        "segmentCount": 3
+      }
+    },
+    {
+      "id": "harness-outline-7",
+      "category": "outline",
+      "passed": true,
+      "actual": {
+        "totalDays": 30,
+        "segmentCount": 3,
+        "errors": []
+      },
+      "expected": {
+        "totalDays": 30,
+        "segmentCount": 3
+      }
+    },
+    {
+      "id": "harness-outline-8",
+      "category": "outline",
+      "passed": true,
+      "actual": {
+        "totalDays": 35,
+        "segmentCount": 3,
+        "errors": []
+      },
+      "expected": {
+        "totalDays": 35,
+        "segmentCount": 3
+      }
+    },
+    {
+      "id": "harness-outline-9",
+      "category": "outline",
+      "passed": true,
+      "actual": {
+        "totalDays": 45,
+        "segmentCount": 3,
+        "errors": []
+      },
+      "expected": {
+        "totalDays": 45,
+        "segmentCount": 3
+      }
+    },
+    {
+      "id": "harness-outline-10",
+      "category": "outline",
+      "passed": true,
+      "actual": {
+        "totalDays": 60,
+        "segmentCount": 3,
+        "errors": []
+      },
+      "expected": {
+        "totalDays": 60,
+        "segmentCount": 3
+      }
+    }
+  ]
+}

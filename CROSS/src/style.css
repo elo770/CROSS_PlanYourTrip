@@ -4,10 +4,69 @@
   box-sizing: border-box;
 }
 
+:root {
+  --cross-canvas: #d8dcdd;
+  --cross-paper: #dcdfde;
+  --cross-paper-deep: #c5cbcc;
+  --cross-mountain-far: #9997a4;
+  --cross-ink: #1d2226;
+  --cross-ink-soft: rgba(29, 34, 38, 0.66);
+  --cross-ink-faint: rgba(29, 34, 38, 0.28);
+  --cross-muted: #697177;
+  --cross-mountain: #6b6c7b;
+  --cross-lake: #5b6b73;
+  --cross-moss: #5f7267;
+  --cross-rust: #a14b3c;
+  --cross-sand: #b6a18a;
+  --cross-rose: #a27d83;
+  --cross-sage: #5f7267;
+  --cross-sage-soft: #e5ece5;
+  --cross-terracotta: #a14b3c;
+  --cross-border: rgba(29, 34, 38, 0.18);
+  --cross-shadow: 0 10px 28px rgba(29, 34, 38, 0.1);
+  --el-color-primary: #5b6b73;
+  --el-color-primary-light-3: #8d9ca3;
+  --el-color-primary-light-5: #aeb9bd;
+  --el-color-primary-light-7: #cbd3d5;
+  --el-color-primary-light-8: #dbe1e2;
+  --el-color-primary-light-9: #e9edef;
+  --el-color-success: #5f7267;
+  --el-color-success-light-9: #e5ece5;
+  --el-color-warning: #806744;
+  --el-color-warning-light-9: #eee7dc;
+  --el-color-danger: #8e4036;
+  --el-color-danger-light-9: #f0e1de;
+  --el-color-info: #6b6c7b;
+  --el-color-info-light-9: #e5e2ea;
+  --el-bg-color: #dcdfde;
+  --el-bg-color-page: #d8dcdd;
+  --el-bg-color-overlay: #dcdfde;
+  --el-fill-color-blank: #dcdfde;
+  --el-fill-color-light: #dfe2e1;
+  --el-fill-color-lighter: #e2e5e4;
+  --el-fill-color-extra-light: #e5e7e6;
+  --el-text-color-primary: #1d2226;
+  --el-text-color-regular: #5b6b73;
+  --el-text-color-secondary: #697177;
+  --el-text-color-placeholder: #939a9c;
+  --el-border-color: rgba(29, 34, 38, 0.18);
+  --el-border-color-light: rgba(29, 34, 38, 0.12);
+  --el-border-color-lighter: rgba(29, 34, 38, 0.08);
+  --el-card-bg-color: rgba(216, 220, 221, 0.82);
+  --el-menu-bg-color: transparent;
+  --el-menu-text-color: rgba(29, 34, 38, 0.62);
+  --el-menu-active-color: #a14b3c;
+  --el-button-hover-bg-color: #e1e8ea;
+  --el-button-hover-text-color: #1d2226;
+  --el-button-hover-border-color: #5b6b73;
+  --cross-lavender: #8a8798;
+}
+
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
-    'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
-    'Noto Color Emoji';
+  background: var(--cross-canvas);
+  color: var(--cross-ink);
+  font-family: 'MiSans', 'HarmonyOS Sans SC', 'PingFang SC', -apple-system, BlinkMacSystemFont,
+    'Segoe UI', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -16,5 +75,174 @@ body {
   width: 100%;
   height: 100vh;
   overflow: hidden;
+}
+
+.el-icon {
+  color: inherit;
+}
+
+.el-card {
+  --el-card-bg-color: rgba(220, 223, 222, 0.58);
+  border-color: var(--cross-border);
+  border-radius: 4px 12px 4px 4px;
+  box-shadow: none;
+}
+
+.el-card.is-hover-shadow:hover,
+.el-card.is-always-shadow {
+  box-shadow: 0 8px 22px rgba(29, 34, 38, 0.08);
+}
+
+.el-card__header {
+  border-bottom-color: rgba(29, 34, 38, 0.12);
+}
+
+.el-divider {
+  --el-border-color: rgba(29, 34, 38, 0.12);
+}
+
+.el-table {
+  --el-table-bg-color: transparent;
+  --el-table-tr-bg-color: transparent;
+  --el-table-header-bg-color: rgba(29, 34, 38, 0.035);
+  --el-table-row-hover-bg-color: rgba(91, 107, 115, 0.08);
+  --el-table-border-color: rgba(29, 34, 38, 0.1);
+  --el-table-header-text-color: var(--cross-ink-soft);
+  --el-table-text-color: var(--cross-ink);
+}
+
+.el-dialog {
+  --el-dialog-bg-color: var(--cross-paper);
+  border: 1px solid var(--cross-border);
+  border-radius: 5px 14px 5px 5px;
+  box-shadow: var(--cross-shadow);
+}
+
+input[type='checkbox'] {
+  accent-color: var(--cross-lake);
+}
+
+/* Deep semantic control palette: no silver or fluorescent control surfaces. */
+.el-tag {
+  --el-tag-bg-color: rgba(48, 56, 61, 0.08);
+  --el-tag-border-color: rgba(48, 56, 61, 0.2);
+  --el-tag-text-color: #30383d;
+}
+
+.el-button {
+  --el-button-bg-color: #f0eee8;
+  --el-button-border-color: rgba(48, 56, 61, 0.22);
+  --el-button-text-color: #30383d;
+  --el-button-hover-bg-color: rgba(91, 107, 115, 0.14);
+  --el-button-hover-border-color: rgba(48, 56, 61, 0.34);
+  --el-button-hover-text-color: #30383d;
+  --el-button-active-bg-color: rgba(95, 114, 103, 0.2);
+  --el-button-active-border-color: rgba(48, 56, 61, 0.38);
+}
+
+.el-input__wrapper,
+.el-select__wrapper,
+.el-textarea__inner {
+  background: #f0eee8;
+  box-shadow: 0 0 0 1px rgba(48, 56, 61, 0.22) inset;
+  color: #30383d;
+}
+
+.el-input__inner,
+.el-textarea__inner,
+.el-select__selected-item,
+.el-select__placeholder,
+.el-input__icon {
+  color: #30383d;
+}
+
+.el-input__inner::placeholder,
+.el-textarea__inner::placeholder {
+  color: rgba(48, 56, 61, 0.52);
+}
+
+.el-tag--primary {
+  --el-tag-bg-color: rgba(91, 107, 115, 0.16);
+  --el-tag-border-color: rgba(91, 107, 115, 0.34);
+  --el-tag-text-color: #30383d;
+}
+
+.el-tag--success {
+  --el-tag-bg-color: rgba(79, 102, 86, 0.16);
+  --el-tag-border-color: rgba(79, 102, 86, 0.34);
+  --el-tag-text-color: #30383d;
+}
+
+.el-tag--warning {
+  --el-tag-bg-color: rgba(95, 114, 103, 0.16);
+  --el-tag-border-color: rgba(95, 114, 103, 0.34);
+  --el-tag-text-color: #30383d;
+}
+
+.el-tag--danger {
+  --el-tag-bg-color: rgba(122, 85, 92, 0.16);
+  --el-tag-border-color: rgba(122, 85, 92, 0.34);
+  --el-tag-text-color: #30383d;
+}
+
+.el-tag--info {
+  --el-tag-bg-color: rgba(95, 91, 112, 0.16);
+  --el-tag-border-color: rgba(95, 91, 112, 0.34);
+  --el-tag-text-color: #30383d;
+}
+
+.el-button--primary {
+  --el-button-bg-color: rgba(91, 107, 115, 0.16);
+  --el-button-border-color: rgba(91, 107, 115, 0.34);
+  --el-button-text-color: #30383d;
+  --el-button-hover-bg-color: rgba(91, 107, 115, 0.24);
+  --el-button-hover-border-color: rgba(91, 107, 115, 0.46);
+  --el-button-hover-text-color: #30383d;
+  --el-button-active-bg-color: rgba(91, 107, 115, 0.3);
+  --el-button-active-border-color: rgba(91, 107, 115, 0.5);
+}
+
+.el-button--success {
+  --el-button-bg-color: rgba(79, 102, 86, 0.16);
+  --el-button-border-color: rgba(79, 102, 86, 0.34);
+  --el-button-text-color: #30383d;
+  --el-button-hover-bg-color: rgba(79, 102, 86, 0.24);
+  --el-button-hover-border-color: rgba(79, 102, 86, 0.46);
+  --el-button-hover-text-color: #30383d;
+  --el-button-active-bg-color: rgba(79, 102, 86, 0.3);
+  --el-button-active-border-color: rgba(79, 102, 86, 0.5);
+}
+
+.el-button--warning {
+  --el-button-bg-color: rgba(95, 114, 103, 0.16);
+  --el-button-border-color: rgba(95, 114, 103, 0.34);
+  --el-button-text-color: #30383d;
+  --el-button-hover-bg-color: rgba(95, 114, 103, 0.24);
+  --el-button-hover-border-color: rgba(95, 114, 103, 0.46);
+  --el-button-hover-text-color: #30383d;
+  --el-button-active-bg-color: rgba(95, 114, 103, 0.3);
+  --el-button-active-border-color: rgba(95, 114, 103, 0.5);
+}
+
+.el-button--danger {
+  --el-button-bg-color: rgba(122, 85, 92, 0.16);
+  --el-button-border-color: rgba(122, 85, 92, 0.34);
+  --el-button-text-color: #30383d;
+  --el-button-hover-bg-color: rgba(122, 85, 92, 0.24);
+  --el-button-hover-border-color: rgba(122, 85, 92, 0.46);
+  --el-button-hover-text-color: #30383d;
+  --el-button-active-bg-color: rgba(122, 85, 92, 0.3);
+  --el-button-active-border-color: rgba(122, 85, 92, 0.5);
+}
+
+.el-button--info {
+  --el-button-bg-color: rgba(95, 91, 112, 0.16);
+  --el-button-border-color: rgba(95, 91, 112, 0.34);
+  --el-button-text-color: #30383d;
+  --el-button-hover-bg-color: rgba(95, 91, 112, 0.24);
+  --el-button-hover-border-color: rgba(95, 91, 112, 0.46);
+  --el-button-hover-text-color: #30383d;
+  --el-button-active-bg-color: rgba(95, 91, 112, 0.3);
+  --el-button-active-border-color: rgba(95, 91, 112, 0.5);
 }
 
