@@ -4,7 +4,7 @@
 
 **越陌 CROSS** 将地点收集、地图查看、路线编排、分日行程、预算管理和 AI 对话整合在同一个工作台。用户可以在地图上直观看到地点分布，再按区域、天数和游览节奏安排顺序，减少跨区折返，让“想去哪里”逐步变成一份清晰的旅行计划。
 
-![CROSS 首页山景](CROSS/public/readme/hero-landscape.svg)
+![CROSS 首页：新建与管理路线](CROSS/public/readme/home.png)
 
 ## CROSS 解决什么问题
 
@@ -15,7 +15,7 @@
 | 改一个地点后还要手动改地图和日程 | 地点、每日顺序和行程联动更新 | 减少重复整理，方便持续调整 |
 | AI 一次生成后难以继续讨论 | Agent 保留草案与上下文，可继续分析和修改 | 先讨论、再确认，不必从头规划 |
 
-![未形成路线时的路径插图](CROSS/public/readme/route-empty-state.svg)
+![CROSS 路线规划工作台：地图、地点列表与 AI 助手联动](CROSS/public/readme/map-planner.png)
 
 ## 一次旅行如何在 CROSS 中完成
 
@@ -200,17 +200,4 @@ npm run preview
 
 使用者需要申请并填写**自己的** DeepSeek、高德与数据库配置。无需也不应共享作者的模型密钥、额度或账户权限。
 
-## 路由页面
 
-当前前端路由如下：
-
-- `/home` 首页
-- `/map` 路线规划
-- `/schedule` 日程安排
-- `/budget` 预算管理
-
-
-
-- `npm test --prefix server`：运行确定性回归测试
-- `npm run eval:offline --prefix server`：运行离线 Harness 评测并生成报告
-- `npm run eval:live --prefix server -- --version=v1-structured`：调用真实 DeepSeek/高德；仅在密钥已配置时运行
