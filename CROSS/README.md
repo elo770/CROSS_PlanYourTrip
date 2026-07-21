@@ -107,32 +107,6 @@ CROSS 面向希望把零散攻略整理成清晰旅行计划的自由行用户�
 - Express、PostgreSQL、SSE
 - DeepSeek、LangGraph、高德 POI 服务
 
-## 目录结构
-
-```text
-CROSS/
-|- src/
-|  |- components/
-|  |- lib/
-|  |- router/
-|  |- store/
-|  |- types/
-|  |- views/
-|  |- App.vue
-|  |- main.ts
-|  `- style.css
-|- public/
-|- server/
-|  |- routes/
-|  |- db.js
-|  `- index.js
-|- docs/
-|- .env.example
-|- package.json
-|- render.yaml
-`- vercel.json
-```
-
 ## 环境要求
 
 - Node.js 18 或更高版本
