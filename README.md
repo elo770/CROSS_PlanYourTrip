@@ -4,7 +4,7 @@
 
 **越陌 CROSS** 将地点收集、地图查看、路线编排、分日行程、预算管理和 AI 对话整合在同一个工作台。用户可以在地图上直观看到地点分布，再按区域、天数和游览节奏安排顺序，减少跨区折返，让“想去哪里”逐步变成一份清晰的旅行计划。
 
-![CROSS 首页山景](CROSS/public/readme/hero-landscape.svg)
+![CROSS 首页：新建与管理路线](CROSS/public/readme/home.png)
 
 ## CROSS 解决什么问题
 
@@ -15,7 +15,7 @@
 | 改一个地点后还要手动改地图和日程 | 地点、每日顺序和行程联动更新 | 减少重复整理，方便持续调整 |
 | AI 一次生成后难以继续讨论 | Agent 保留草案与上下文，可继续分析和修改 | 先讨论、再确认，不必从头规划 |
 
-![未形成路线时的路径插图](CROSS/public/readme/route-empty-state.svg)
+![CROSS 路线规划工作台：地图、地点列表与 AI 助手联动](CROSS/public/readme/map-planner.png)
 
 ## 一次旅行如何在 CROSS 中完成
 
