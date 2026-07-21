@@ -133,14 +133,14 @@ const removeImage = () => {
 <style scoped>
 .destination-editor {
   padding: 20px;
-  background: #fff;
+  background: #dcdfde;
   border-radius: 4px;
-  box-shadow: 0 2px 12px 0 rgba(0,0,0,0.1);
+  box-shadow: 0 2px 12px 0 rgba(29,34,38,0.1);
 }
 
 .no-destination {
   text-align: center;
-  color: #909399;
+  color: rgba(29, 34, 38, 0.46);
   padding: 20px;
 }
 
@@ -151,7 +151,7 @@ const removeImage = () => {
 .image-preview {
   width: 200px;
   height: 150px;
-  border: 1px solid #dcdfe6;
+  border: 1px solid rgba(29, 34, 38, 0.18);
   border-radius: 4px;
   overflow: hidden;
   position: relative;
@@ -182,7 +182,7 @@ const removeImage = () => {
 
 .upload-tip {
   font-size: 12px;
-  color: #909399;
+  color: rgba(29, 34, 38, 0.46);
   margin-top: 5px;
 }
 </style>

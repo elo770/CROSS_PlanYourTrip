@@ -44,6 +44,7 @@
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useTripStore } from '@/store/trip'
 import type { Destination } from '@/types'
+import { dayColor } from '@/lib/dayPalette'
 
 declare global {
   interface Window {
@@ -86,16 +87,14 @@ let readyHandlers: Array<() => void> = []
 let isSelecting = false
 let panEnabled = true
 let highlightedDay: number | null = null
+let visibleDay: number | 'overview' | 'unscheduled' = 'overview'
+let routeLineVisible = true
 let draftDestinations: Destination[] = []
-
-const DAY_ROUTE_COLORS = [
-  '#5F5B70',
-  '#5B6B73',
-  '#7A555C',
-  '#5F7267',
-  '#4F6656',
-  '#30383D'
-]
+let draftPreviewMode = false
+let renderQueued = false
+let queuedKeepView = true
+let renderRevision = 0
+let renderErrorHandler: ((error: Error) => void) | null = null
 
 const showPointForm = ref(false)
 const isEditing = ref(false)
@@ -143,6 +142,7 @@ async function initMap() {
     center: [114.057868, 22.543099],
     zoom: 5,
     viewMode: '2D',
+    mapStyle: 'amap://styles/whitesmoke',
     resizeEnable: true
   })
   map.addControl(new AMap.Scale())
@@ -195,12 +195,6 @@ function dayMapForDestinations() {
   return dayById
 }
 
-function colorForDay(day: unknown) {
-  const n = Number(day)
-  const safeDay = Number.isFinite(n) && n > 0 ? n : 1
-  return DAY_ROUTE_COLORS[(safeDay - 1) % DAY_ROUTE_COLORS.length]
-}
-
 function groupPlacesByDay(places: Destination[], dayById = new Map<string, number>()) {
   const groups = new Map<number, Destination[]>()
   for (const place of places) {
@@ -230,35 +224,32 @@ function offsetDuplicatePoints(points: [number, number][]) {
 }
 
 function markerContent(label: number, color: string, isHighlighted: boolean) {
-  const size = isHighlighted ? 38 : 30
-  return `<div style="width:${size}px;height:${size}px;border-radius:50%;background:${color};display:flex;align-items:center;justify-content:center;color:#F3EFE7;font-weight:700;font-size:14px;box-shadow:0 2px 8px rgba(29,34,38,.22);border:2px solid rgba(243,239,231,.88);">${label}</div>`
+  const size = isHighlighted ? 28 : 24
+  const shadow = isHighlighted
+    ? '0 2px 7px rgba(32,37,41,.24)'
+    : '0 1px 4px rgba(32,37,41,.18)'
+  return `<div style="width:${size}px;height:${size}px;border-radius:50%;background:${color};display:flex;align-items:center;justify-content:center;color:#F3EFE7;font-weight:600;font-size:11px;box-shadow:${shadow};">${label}</div>`
 }
 
 function clearMapOverlays() {
   if (!map) return
-  if (routeLines.length) {
-    map.remove(routeLines)
-    routeLines = []
-  }
-  if (draftRouteLines.length) {
-    map.remove(draftRouteLines)
-    draftRouteLines = []
-  }
-  if (markers.length) {
-    map.remove(markers)
-    markers = []
-  }
-  if (draftMarkers.length) {
-    map.remove(draftMarkers)
-    draftMarkers = []
-  }
+  map.clearMap()
+  routeLines = []
+  draftRouteLines = []
+  markers = []
+  draftMarkers = []
 }
 
-function updateMap(keepView = true) {
+function renderMap(keepView = true) {
   if (!map || !window.AMap) return
   clearMapOverlays()
 
-  const destinations = [...tripStore.destinations].sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+  const allDestinations = [...tripStore.destinations].sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+  const destinations = draftPreviewMode ? [] : visibleDay === 'overview'
+    ? allDestinations
+    : visibleDay === 'unscheduled'
+      ? allDestinations.filter((dest) => dest.planningStatus === 'unscheduled' || dest.planningStatus === 'candidate')
+      : allDestinations.filter((dest) => Number(dest.day) === visibleDay)
   const scheduledDestinations = destinations.filter(
     (dest) => dest.planningStatus !== 'unscheduled' && dest.planningStatus !== 'candidate' && dest.planningStatus !== 'rejected'
   )
@@ -269,25 +260,27 @@ function updateMap(keepView = true) {
     if (group.places.length < 2) continue
     const routeLine = new window.AMap.Polyline({
       path: group.places.map((dest) => dest.coordinates),
-      strokeColor: colorForDay(group.day),
-      strokeWeight: 4,
-      strokeOpacity: 0.92,
-      strokeStyle: 'solid',
+      strokeColor: dayColor(group.day),
+      strokeWeight: 2,
+      strokeOpacity: 0.48,
+      strokeStyle: 'dashed',
+      strokeDasharray: [3, 8],
       lineJoin: 'round',
       zIndex: 40
     })
     routeLines.push(routeLine)
   }
   if (routeLines.length) map.add(routeLines)
+  if (!routeLineVisible) routeLines.forEach((line) => line.hide())
 
   markers = destinations.map((dest, index) => {
     const day = (dest as any).day ?? dayById.get(dest.id) ?? dest.order
     const isScheduled = dest.planningStatus !== 'unscheduled' && dest.planningStatus !== 'candidate' && dest.planningStatus !== 'rejected'
-    const isHighlighted = !isScheduled || highlightedDay == null || Number(day) === highlightedDay
+    const isHighlighted = highlightedDay != null && Number(day) === highlightedDay
     const marker = new window.AMap.Marker({
       position: displayCoords[index],
       anchor: 'center',
-      content: markerContent(dest.withinDayOrder ?? dest.order ?? index + 1, isScheduled ? colorForDay(day) : '#30383D', isHighlighted),
+      content: markerContent(dest.withinDayOrder ?? dest.order ?? index + 1, isScheduled ? dayColor(day) : '#30383D', isHighlighted),
       zIndex: isHighlighted ? 120 : 80
     })
     marker.on('click', () => {
@@ -306,15 +299,21 @@ function updateMap(keepView = true) {
   })
   if (markers.length) map.add(markers)
 
-  const orderedDraft = [...draftDestinations].sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+  const visibleDraft = visibleDay === 'overview'
+    ? draftDestinations
+    : visibleDay === 'unscheduled'
+      ? draftDestinations.filter((dest) => dest.planningStatus === 'unscheduled' || dest.planningStatus === 'candidate')
+      : draftDestinations.filter((dest) => Number(dest.day) === visibleDay)
+  const orderedDraft = [...visibleDraft].sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
   for (const group of groupPlacesByDay(orderedDraft)) {
     if (group.places.length < 2) continue
     const draftRouteLine = new window.AMap.Polyline({
       path: group.places.map((dest) => dest.coordinates),
-      strokeColor: colorForDay(group.day),
-      strokeWeight: 4,
-      strokeOpacity: 0.72,
+      strokeColor: dayColor(group.day),
+      strokeWeight: 2,
+      strokeOpacity: 0.42,
       strokeStyle: 'dashed',
+      strokeDasharray: [3, 8],
       lineJoin: 'round',
       zIndex: 60
     })
@@ -322,16 +321,41 @@ function updateMap(keepView = true) {
   }
   if (draftRouteLines.length) map.add(draftRouteLines)
   draftMarkers = orderedDraft.map((dest, index) => {
-    const color = colorForDay(dest.day ?? 1)
+    const color = dayColor(dest.day ?? 1)
     return new window.AMap.Marker({
       position: dest.coordinates,
       anchor: 'center',
-      content: `<div style="width:30px;height:30px;border-radius:50%;background:${color};border:2px dashed rgba(243,239,231,.92);display:flex;align-items:center;justify-content:center;color:#F3EFE7;font-weight:700;font-size:13px;box-shadow:0 2px 8px rgba(29,34,38,.16);">${dest.withinDayOrder ?? index + 1}</div>`,
+      content: `<div style="width:24px;height:24px;border-radius:50%;background:${color};display:flex;align-items:center;justify-content:center;color:#F3EFE7;font-weight:600;font-size:11px;box-shadow:0 1px 4px rgba(29,34,38,.14);">${dest.withinDayOrder ?? index + 1}</div>`,
       zIndex: 140
     })
   })
   if (draftMarkers.length) map.add(draftMarkers)
   if (!keepView) fitBounds()
+}
+
+function updateMap(keepView = true) {
+  queuedKeepView = queuedKeepView && keepView
+  renderRevision += 1
+  if (renderQueued) return
+  renderQueued = true
+  const revision = renderRevision
+  queueMicrotask(() => {
+    renderQueued = false
+    const shouldKeepView = queuedKeepView
+    queuedKeepView = true
+    try {
+      renderMap(shouldKeepView)
+    } catch (error) {
+      window.setTimeout(() => {
+        if (revision !== renderRevision) return
+        try {
+          renderMap(shouldKeepView)
+        } catch (retryError) {
+          renderErrorHandler?.(retryError instanceof Error ? retryError : new Error('地图刷新失败'))
+        }
+      }, 0)
+    }
+  })
 }
 
 function isMapReady() {
@@ -356,6 +380,12 @@ watch(
 function setHighlightedDay(day: number | null) {
   highlightedDay = day
   updateMap(true)
+}
+
+function setVisibleDay(day: number | 'overview' | 'unscheduled', render = true) {
+  visibleDay = day
+  highlightedDay = typeof day === 'number' ? day : null
+  if (render) updateMap(true)
 }
 
 function setMapSelecting(selecting: boolean) {
@@ -483,14 +513,8 @@ function fitBounds(options: FitBoundsOptions = {}) {
       flyToLocation(lng, lat, { zoom: 12, offset: options.offset })
       return
     }
-    if (selectedDestinations) {
-      const bounds = new window.AMap.Bounds()
-      allDestinations.forEach((destination) => bounds.extend(destination.coordinates))
-      map.setBounds(bounds, false, amapPadding(options.padding))
-      return
-    }
-    const overlays = [...routeLines, ...draftRouteLines, ...markers, ...draftMarkers]
-    map.setFitView(overlays, false, amapPadding(options.padding), 15)
+    const overlays = selectedDestinations ? markers : [...markers, ...draftMarkers]
+    if (overlays.length) map.setFitView(overlays, false, amapPadding(options.padding), 15)
   })
 }
 
@@ -508,12 +532,22 @@ function updateSize() {
 }
 
 function setRouteLineVisible(visible: boolean) {
+  routeLineVisible = visible
   routeLines.forEach((line) => visible ? line.show() : line.hide())
 }
 
 function setDraftDestinations(destinations: Destination[]) {
   draftDestinations = destinations
   updateMap(true)
+}
+
+function setDraftPreviewMode(enabled: boolean) {
+  draftPreviewMode = enabled
+  updateMap(true)
+}
+
+function onRenderError(handler: (error: Error) => void) {
+  renderErrorHandler = handler
 }
 
 defineExpose({
@@ -527,8 +561,11 @@ defineExpose({
   isMapReady,
   onReady,
   setHighlightedDay,
+  setVisibleDay,
+  onRenderError,
   setRouteLineVisible,
   setDraftDestinations,
+  setDraftPreviewMode,
   openPointForm,
   setPanMode,
   zoomIn,

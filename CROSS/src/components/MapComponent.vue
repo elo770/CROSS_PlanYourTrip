@@ -93,16 +93,16 @@ let highlightedDay: number | null = null
 // 萌萌马卡龙（柔和、低冲突）配色
 const MORANDI_PALETTE = [
   // 参考你给的“常用图表示例”配色条
-  '#7B93C8', // 蓝灰
-  '#43C0DA', // 青蓝
-  '#A6D9E8', // 淡青
-  '#5FA07F', // 青绿
-  '#A7CB86', // 草绿
-  '#D7E7C6', // 浅豆绿
-  '#FFF1A6', // 奶黄
-  '#FFC6AD', // 浅桃
-  '#F3A280', // 浅橘
-  '#F46F4F'  // 橘红
+  '#8A8798', // 山灰紫
+  '#5B6B73', // 湖蓝灰
+  '#A9B9C1', // 雾蓝
+  '#5F7267', // 苔绿
+  '#9BAF94', // 淡苔绿
+  '#D4DFD0', // 浅苔绿
+  '#E7DCC5', // 淡杏黄
+  '#E3CDD0', // 淡粉
+  '#C8A29A', // 柔陶土
+  '#A14B3C'  // 砖红
 ]
 
 function safeOrderIndexExpr() {
@@ -742,7 +742,7 @@ defineExpose({
 }
 
 .point-form-container {
-  background: white;
+  background: #dcdfde;
   border-radius: 8px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
   width: 80%;
@@ -755,7 +755,7 @@ defineExpose({
   justify-content: space-between;
   align-items: center;
   padding: 12px;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid rgba(29, 34, 38, 0.16);
 }
 
 .point-form-header h3 {
@@ -868,8 +868,8 @@ defineExpose({
   justify-content: flex-end;
   gap: 8px;
   padding: 12px;
-  border-top: 1px solid #e0e0e0;
-  background-color: #f8f9fa;
+  border-top: 1px solid rgba(29, 34, 38, 0.16);
+  background-color: #cfd5d6;
 }
 
 .cancel-btn,
@@ -883,21 +883,21 @@ defineExpose({
 }
 
 .cancel-btn {
-  background-color: #fff;
+  background-color: #dcdfde;
   color: #666;
   border: 1px solid #d0d0d0;
 }
 
 .cancel-btn:hover {
-  background-color: #f5f5f5;
+  background-color: #e2e5e4;
 }
 
 .save-btn {
-  background-color: #409eff;
+  background-color: #5b6b73;
   color: white;
 }
 
 .save-btn:hover {
-  background-color: #66b1ff;
+  background-color: #6b7d86;
 }
 </style>
