@@ -38,6 +38,18 @@
               </template>
             </el-table-column>
           </el-table>
+          <div class="mobile-budget-list">
+            <article v-for="item in budgetItems" :key="item.id" class="mobile-budget-item">
+              <div>
+                <span class="budget-type-tag" :style="budgetTypeStyle(item.type)">{{ item.type }}</span>
+                <small>第 {{ item.day }} 天</small>
+              </div>
+              <strong>¥{{ item.amount.toFixed(2) }}</strong>
+              <p>{{ item.description }}</p>
+              <button type="button" :aria-label="`删除${item.description}`" @click="removeBudgetItem(item.id)">删除</button>
+            </article>
+            <p v-if="budgetItems.length === 0" class="mobile-budget-empty">还没有预算明细，点击右上角开始记录。</p>
+          </div>
         </el-card>
       </el-col>
 
@@ -92,7 +104,7 @@
     </el-row>
 
     <!-- 添加预算项对话框 -->
-    <el-dialog v-model="showAddDialog" title="添加预算项" width="500px">
+    <el-dialog v-model="showAddDialog" title="添加预算项" width="min(500px, calc(100vw - 24px))">
       <el-form :model="newBudgetItem" label-width="80px">
         <el-form-item label="天数">
           <el-input-number v-model="newBudgetItem.day" :min="1" />
@@ -422,6 +434,8 @@ function removeBudgetItem(id: string) {
   opacity: .72;
 }
 
+.mobile-budget-list { display: none; }
+
 @media (max-width: 900px) {
   .budget-view {
     padding: 0;
@@ -445,5 +459,44 @@ function removeBudgetItem(id: string) {
 
   .chart-container { height: 230px; }
 }
-</style>
 
+@media (max-width: 720px) {
+  .budget-view,
+  .budget-layout { min-height: 100%; }
+  .ledger-column,
+  .statistics-column { padding: 18px 14px !important; }
+  .card-header { gap: 12px; }
+  .card-header :deep(.el-button) { min-height: 42px; }
+  .budget-ledger :deep(.el-table) { display: none; }
+  .mobile-budget-list { display: grid; gap: 10px; }
+  .mobile-budget-item {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 7px 12px;
+    padding: 14px 52px 14px 14px;
+    border: 1px solid rgba(29, 34, 38, .14);
+    border-radius: 10px;
+    background: rgba(220, 223, 222, .62);
+  }
+  .mobile-budget-item > div { display: flex; align-items: center; gap: 8px; }
+  .mobile-budget-item small { color: var(--cross-muted); font-size: 11px; }
+  .mobile-budget-item > strong { color: var(--cross-ink); font-size: 16px; }
+  .mobile-budget-item p { grid-column: 1 / -1; color: var(--cross-ink-soft); font-size: 13px; line-height: 1.45; }
+  .mobile-budget-item button {
+    position: absolute;
+    top: 8px;
+    right: 6px;
+    min-width: 44px;
+    min-height: 44px;
+    border: 0;
+    background: transparent;
+    color: var(--cross-rust);
+    font: inherit;
+    font-size: 12px;
+  }
+  .mobile-budget-empty { padding: 28px 12px; color: var(--cross-muted); font-size: 13px; text-align: center; }
+  .summary-item { min-height: 40px; }
+  .chart-container { height: 210px; }
+}
+</style>

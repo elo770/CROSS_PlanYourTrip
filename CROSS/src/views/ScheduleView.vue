@@ -336,13 +336,20 @@ function loadPresetRoute() {
 .dialog-action:disabled { opacity: .4; cursor: not-allowed; }
 
 @media (max-width: 720px) {
-  .schedule-view { padding: 28px 18px 48px; }
-  .schedule-header { align-items: flex-start; }
-  .day-content { padding-left: 12px; }
+  .schedule-view { min-height: 100%; padding: 22px 14px 36px; }
+  .schedule-header { align-items: flex-start; gap: 12px; }
+  .schedule-header h1 { font-size: 26px; }
+  .sample-action { min-height: 44px; padding: 8px 10px; }
+  .itinerary-list { margin-top: 24px; }
+  .day-block { grid-template-columns: 16px minmax(0, 1fr); }
+  .day-content { padding-left: 8px; }
   .day-heading { display: block; }
   .date-editor { margin-top: 12px; justify-content: flex-start; }
+  .date-editor input { min-height: 42px; }
   .stop-row { grid-template-columns: 1fr; }
-  .stop-actions { padding-left: 35px; }
+  .stop-main { min-height: 54px; grid-template-columns: 28px minmax(0, 1fr); }
+  .stop-actions { display: grid; grid-template-columns: repeat(4, minmax(44px, 1fr)); gap: 4px; padding: 6px 0 0 36px; }
+  .stop-actions button { min-width: 44px; min-height: 42px; }
   .locate-hint { display: none; }
 }
 

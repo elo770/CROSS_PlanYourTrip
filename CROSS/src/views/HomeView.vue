@@ -559,6 +559,26 @@ function handleDeleteRoute(routeId: string) {
   }
 }
 
+@media (max-width: 720px) {
+  .home-view { min-height: 100%; }
+  .home-container { width: 100%; }
+  .hero-stage { height: 330px; min-height: 330px; }
+  .hero-art { min-width: 760px; left: 50%; transform: translateX(-50%); }
+  .hero-caption { top: 20px; width: calc(100% - 28px); }
+  .hero-kicker { margin-bottom: 12px; }
+  .hero-cta { min-height: 46px; padding: 10px 16px; }
+  .routes-section,
+  .examples-section { padding-right: 14px; padding-left: 14px; }
+  .section-header { align-items: flex-start; gap: 12px; }
+  .new-route-button { min-height: 44px; }
+  .routes-grid { grid-template-columns: 1fr; gap: 12px; }
+  .route-card-header h3 { overflow-wrap: anywhere; }
+  .route-card:hover,
+  .example-card:hover { transform: none; }
+  .example-card-content { align-items: flex-start; padding: 14px 4px; }
+  .example-icon { width: 42px; height: 42px; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .roamer {
     animation: none;
@@ -569,4 +589,3 @@ function handleDeleteRoute(routeId: string) {
   .new-route-button { transition: none; }
 }
 </style>
-

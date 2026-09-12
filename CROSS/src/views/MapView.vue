@@ -1,7 +1,12 @@
 <template>
   <div class="map-view">
+    <nav class="mobile-workspace-switcher" aria-label="路线规划视图">
+      <button type="button" :class="{ active: mobilePanel === 'route' }" :aria-pressed="mobilePanel === 'route'" @click="switchMobilePanel('route')">地点</button>
+      <button type="button" :class="{ active: mobilePanel === 'map' }" :aria-pressed="mobilePanel === 'map'" @click="switchMobilePanel('map')">地图</button>
+      <button type="button" :class="{ active: mobilePanel === 'agent' }" :aria-pressed="mobilePanel === 'agent'" @click="switchMobilePanel('agent')">AI 助手</button>
+    </nav>
     <div class="workspace" :class="{ 'left-collapsed': leftCollapsed, 'right-collapsed': rightCollapsed }">
-      <aside ref="leftPanelRef" class="legacy-sidebar">
+      <aside ref="leftPanelRef" class="legacy-sidebar" :class="{ 'mobile-panel-active': mobilePanel === 'route' }">
         <div class="legacy-sidebar-content">
           <div class="legacy-header">
             <div class="legacy-header-row">
@@ -53,7 +58,7 @@
         </div>
       </aside>
 
-      <main class="map-stage">
+      <main class="map-stage" :class="{ 'mobile-panel-active': mobilePanel === 'map' }">
         <section v-if="agentSession.draftPlan && previewingDraft" class="draft-map-banner">
           <div>
             <strong>正在预览草案</strong>
@@ -74,7 +79,7 @@
         <AmapMapComponent ref="mapRef" class="map-canvas" />
       </main>
 
-      <aside ref="rightPanelRef" class="agent-panel paper-panel">
+      <aside ref="rightPanelRef" class="agent-panel paper-panel" :class="{ 'mobile-panel-active': mobilePanel === 'agent' }">
         <header class="panel-title agent-title">
           <div>
             <p class="eyebrow">CROSS</p>
@@ -190,6 +195,31 @@
               <ul v-if="message.changes?.length" class="change-list">
                 <li v-for="change in message.changes" :key="`${message.id}-${change.type}-${change.message}`">{{ change.message }}</li>
               </ul>
+              <section v-if="message.candidateSet" class="candidate-result">
+                <header>
+                  <div>
+                    <strong>地点候选 · {{ message.candidateSet.query }}</strong>
+                    <small>来自高德 POI，勾选只是告诉 CROSS 你的偏好，还不会加入地图或行程。</small>
+                  </div>
+                </header>
+                <div class="candidate-list">
+                  <label v-for="candidate in message.candidateSet.candidates" :key="candidate.id" class="candidate-row">
+                    <input
+                      type="checkbox"
+                      :checked="isCandidateSelected(message.candidateSet.id, candidate.id, message.candidateSet.selectedIds)"
+                      @change="toggleCandidate(message.candidateSet.id, candidate.id, message.candidateSet.selectedIds)"
+                    />
+                    <span><strong>{{ candidate.name }}</strong><small>{{ candidate.address || candidate.city || '地址待补充' }}</small></span>
+                  </label>
+                </div>
+                <button v-if="message.candidateSet.status === 'awaiting_selection'" class="candidate-continue" @click="confirmCandidateSelection(message)">按这些地点继续</button>
+              </section>
+              <section v-if="message.generationConfirmation && !message.draftPlan" class="generation-confirmation">
+                <strong>准备生成草案</strong>
+                <p>{{ message.generationConfirmation.city }} · {{ message.generationConfirmation.days }} 天 · {{ message.generationConfirmation.pace }}节奏</p>
+                <small>已选地点：{{ message.generationConfirmation.selectedPlaces.map((item) => item.name).join('、') || '暂未选择具体地点' }}</small>
+                <button class="confirm-action" @click="confirmDraftGeneration">开始生成草案</button>
+              </section>
               <section v-if="message.draftPlan" class="draft-result-card">
                 <header>
                   <div>
@@ -254,9 +284,9 @@
               v-model="agentRequest"
               rows="2"
               :placeholder="agentPlaceholder"
-              @keydown.enter.exact.prevent="sendAgentMessage"
+              @keydown.enter.exact.prevent="sendAgentMessage()"
             />
-            <button class="send-button" :disabled="!agentRequest.trim()" @click="sendAgentMessage">
+            <button class="send-button" :disabled="!agentRequest.trim()" @click="sendAgentMessage()">
               {{ isAgentLoading ? '追加' : '发送' }}
             </button>
           </footer>
@@ -284,7 +314,7 @@ import {
   setActiveTripId
 } from '@/lib/agentSessionStorage'
 import { dayColor, dayTint } from '@/lib/dayPalette'
-import type { AgentActivity, AgentChatResponse, AgentMessage, AgentPlanResult, AgentSession, AgentSuggestion, Destination, Trip, TripSnapshot } from '@/types'
+import type { AgentActivity, AgentChatResponse, AgentInteraction, AgentMessage, AgentPlanResult, AgentSession, AgentSuggestion, Destination, TripSnapshot } from '@/types'
 
 const tripStore = useTripStore()
 const route = useRoute()
@@ -294,6 +324,7 @@ const rightPanelRef = ref<HTMLElement>()
 const mapCenter = ref<[number, number] | null>(null)
 const leftCollapsed = ref(false)
 const rightCollapsed = ref(false)
+const mobilePanel = ref<'route' | 'map' | 'agent'>('map')
 const activeConstraint = ref<'destination' | 'dates' | 'pace' | null>(null)
 const isAddingPoint = ref(false)
 const mapRenderError = ref(false)
@@ -308,6 +339,7 @@ const activeDay = ref<number | 'overview' | 'unscheduled'>('overview')
 const previewingDraft = ref(false)
 const selectedPlaceId = ref<string | null>(null)
 const agentRequest = ref('')
+const candidateSelections = ref<Record<string, string[]>>({})
 const agentScrollRef = ref<HTMLElement>()
 const agentInputRef = ref<HTMLTextAreaElement>()
 const destinationQuery = ref('')
@@ -375,6 +407,17 @@ const visibleDestinations = computed(() => {
   return displayedDestinations.value.filter((place) => Number(place.day) === activeDay.value)
 })
 const hasMapContent = computed(() => destinations.value.length > 0 || Boolean(agentSession.value.draftPlan?.route.destinations.length))
+
+function switchMobilePanel(panel: 'route' | 'map' | 'agent') {
+  mobilePanel.value = panel
+  if (panel === 'agent') rightCollapsed.value = false
+  if (panel === 'map') {
+    void nextTick(() => {
+      window.dispatchEvent(new Event('resize'))
+      if (hasMapContent.value) mapRef.value?.fitBounds({ padding: mapViewportPadding(), destinations: visibleDestinations.value })
+    })
+  }
+}
 
 function loadRecentCities(): string[] {
   try {
@@ -634,6 +677,7 @@ function draftDays(plan: AgentPlanResult) {
 
 function focusDraftPreview() {
   if (!agentSession.value.draftPlan) return
+  switchMobilePanel('map')
   previewingDraft.value = true
   activeDay.value = 'overview'
   selectedPlaceId.value = null
@@ -643,6 +687,7 @@ function focusDraftPreview() {
 }
 
 function showFormalRoute() {
+  switchMobilePanel('map')
   previewingDraft.value = false
   activeDay.value = 'overview'
   selectedPlaceId.value = null
@@ -677,6 +722,28 @@ function handleSuggestion(message: AgentMessage, suggestion: AgentSuggestion | s
     agentRequest.value = suggestion.message
     void sendAgentMessage()
   }
+}
+
+function isCandidateSelected(setId: string, candidateId: string, initial: string[] = []) {
+  return (candidateSelections.value[setId] || initial).includes(candidateId)
+}
+
+function toggleCandidate(setId: string, candidateId: string, initial: string[] = []) {
+  const selected = new Set(candidateSelections.value[setId] || initial)
+  if (selected.has(candidateId)) selected.delete(candidateId)
+  else selected.add(candidateId)
+  candidateSelections.value = { ...candidateSelections.value, [setId]: [...selected] }
+}
+
+function confirmCandidateSelection(message: AgentMessage) {
+  const candidateSet = message.candidateSet
+  if (!candidateSet) return
+  const selectedIds = candidateSelections.value[candidateSet.id] || candidateSet.selectedIds || []
+  void sendAgentMessage({ type: 'select_candidates', candidateSetId: candidateSet.id, selectedIds }, '按这些地点继续')
+}
+
+function confirmDraftGeneration() {
+  void sendAgentMessage({ type: 'confirm_generation' }, '开始生成草案')
 }
 
 async function readAgentResponse(response: Response): Promise<AgentChatResponse> {
@@ -802,6 +869,8 @@ function focusDestination(place: Destination) {
     activeDay.value = place.day
     mapRef.value?.setVisibleDay(place.day)
   }
+  switchMobilePanel('map')
+  void nextTick(() => mapRef.value?.flyToLocation(place.coordinates[0], place.coordinates[1], { zoom: 14 }))
   mapRef.value?.flyToLocation(place.coordinates[0], place.coordinates[1], { zoom: 14 })
 }
 
@@ -978,8 +1047,8 @@ function retryMapRender() {
   mapRef.value?.updateMap(false)
 }
 
-async function sendAgentMessage() {
-  const content = agentRequest.value.trim()
+async function sendAgentMessage(interaction?: AgentInteraction, interactionLabel = '') {
+  const content = interactionLabel || agentRequest.value.trim()
   if (!content) return
   const previousMessageIds = activeRequestId.value ? activeInstructionMessageIds : []
   if (activeRequestId.value) {
@@ -1037,6 +1106,7 @@ async function sendAgentMessage() {
       body: JSON.stringify({
         sessionId: agentSession.value.id,
         requestId,
+        interaction,
         tripId: activeTripId.value,
         trip: tripStore.currentTrip || agentSession.value.draftTrip || undefined,
         message: content,
@@ -1064,6 +1134,8 @@ async function sendAgentMessage() {
     assistantMessage.draftPlan = payload.draftPlan
     assistantMessage.draftTrip = payload.draftTrip
     assistantMessage.draftExplanation = payload.draftExplanation
+    assistantMessage.candidateSet = payload.candidateSet
+    assistantMessage.generationConfirmation = payload.generationConfirmation
     agentSession.value.pendingTask = payload.pendingTask || null
     if (payload.draftPlan) {
       agentSession.value.draftPlan = payload.draftPlan
@@ -1233,6 +1305,7 @@ onBeforeUnmount(() => {
 <style scoped>
 .map-view { --cross-ink-soft: rgba(32, 37, 41, .76); --cross-ink-faint: rgba(32, 37, 41, .38); --cross-muted: #555f64; position: relative; width: 100%; height: 100%; min-height: 0; background: #d8dcdd; overflow: hidden; }
 .workspace { position: relative; height: 100%; min-height: 0; }
+.mobile-workspace-switcher { display: none; }
 .paper-panel { background: rgba(216, 220, 221, .94); border: 1px solid rgba(29, 34, 38, .18); border-radius: 8px; box-shadow: 0 6px 20px rgba(29, 34, 38, .1); }
 .trip-panel, .agent-panel { min-width: 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
 .panel-title { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; padding: 18px 16px 14px; border-bottom: 1px solid rgba(29, 34, 38, .14); }
@@ -1328,6 +1401,20 @@ onBeforeUnmount(() => {
 .proposal-segments li { display: grid; grid-template-columns: 1fr auto; gap: 4px 8px; }
 .proposal-segments small { grid-column: 1 / -1; color: var(--cross-ink-soft); }
 .draft-result-card { margin-top: 10px; border-top: 2px solid var(--cross-rust); border-bottom: 1px solid rgba(32, 37, 41, .18); background: rgba(216, 220, 221, .42); padding: 11px 0; }
+.candidate-result, .generation-confirmation { margin-top: 10px; border-top: 2px solid var(--cross-moss); border-bottom: 1px solid rgba(32, 37, 41, .18); padding: 10px 0; }
+.candidate-result > header strong, .candidate-result > header small { display: block; }
+.candidate-result > header strong, .generation-confirmation > strong { color: var(--cross-ink); font-size: 13px; }
+.candidate-result > header small, .generation-confirmation > small { margin-top: 3px; color: var(--cross-ink-soft); font-size: 11px; line-height: 1.55; }
+.candidate-list { margin-top: 8px; border-top: 1px solid rgba(32, 37, 41, .12); }
+.candidate-row { display: grid; grid-template-columns: 16px minmax(0, 1fr); gap: 7px; align-items: start; border-bottom: 1px solid rgba(32, 37, 41, .1); padding: 8px 1px; cursor: pointer; }
+.candidate-row input { accent-color: var(--cross-rust); margin: 3px 0 0; }
+.candidate-row span, .candidate-row strong, .candidate-row small { display: block; }
+.candidate-row strong { color: var(--cross-ink); font-size: 12px; }
+.candidate-row small { margin-top: 2px; color: var(--cross-ink-soft); font-size: 10px; line-height: 1.45; }
+.candidate-continue { margin-top: 10px; border: 0; border-bottom: 1px solid var(--cross-rust); border-radius: 0; background: transparent; color: var(--cross-rust); padding: 4px 1px; font: inherit; font-size: 12px; cursor: pointer; }
+.generation-confirmation { border-top-color: var(--cross-rust); }
+.generation-confirmation p { margin: 6px 0 3px; color: var(--cross-ink); font-size: 12px; }
+.generation-confirmation .confirm-action { display: block; margin-top: 10px; }
 .draft-result-card > header { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
 .draft-result-card > header strong, .draft-result-card > header small { display: block; }
 .draft-result-card > header strong { color: var(--cross-ink); font-size: 13px; }
@@ -1470,5 +1557,111 @@ onBeforeUnmount(() => {
 .toolbar-button:hover, .toolbar-button.active { border-bottom-color: var(--cross-rust); background: transparent; color: var(--cross-rust); }
 .map-retry { color: var(--cross-rust); }
 @media (max-width: 1180px) { .legacy-sidebar { width: 340px; } .agent-panel { width: 300px; } .map-toolbar { left: 380px; right: 340px; } .draft-map-banner { left: 380px; max-width: min(360px, calc(100% - 720px)); } }
+@media (max-width: 900px) {
+  .map-view { height: 100%; overflow: hidden; }
+  .mobile-workspace-switcher {
+    position: absolute;
+    z-index: 30;
+    top: 8px;
+    left: 50%;
+    display: grid;
+    width: min(312px, calc(100% - 24px));
+    height: 44px;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 3px;
+    padding: 3px;
+    border: 1px solid rgba(29, 34, 38, .18);
+    border-radius: 12px;
+    background: rgba(220, 223, 222, .96);
+    box-shadow: 0 5px 18px rgba(29, 34, 38, .12);
+    transform: translateX(-50%);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+  }
+  .mobile-workspace-switcher button {
+    min-height: 36px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--cross-ink-soft);
+    font: inherit;
+    font-size: 13px;
+  }
+  .mobile-workspace-switcher button.active { background: var(--cross-ink); color: var(--cross-paper); font-weight: 650; }
+  .workspace { height: 100%; min-height: 0; }
+  .legacy-sidebar,
+  .agent-panel,
+  .map-stage {
+    visibility: hidden;
+    pointer-events: none;
+    opacity: 0;
+  }
+  .legacy-sidebar.mobile-panel-active,
+  .agent-panel.mobile-panel-active,
+  .map-stage.mobile-panel-active {
+    visibility: visible;
+    pointer-events: auto;
+    opacity: 1;
+  }
+  .legacy-sidebar,
+  .agent-panel {
+    top: 60px;
+    right: 10px;
+    bottom: 10px;
+    left: 10px;
+    width: auto;
+    height: auto;
+    border-radius: 14px;
+    transition: opacity .16s ease;
+  }
+  .workspace.right-collapsed .agent-panel { width: auto; }
+  .legacy-sidebar-content { padding: 14px 12px; }
+  .legacy-header-row { flex-wrap: wrap; gap: 8px; }
+  .legacy-actions { display: grid; grid-template-columns: repeat(3, 1fr); }
+  .legacy-actions button,
+  .legacy-days button,
+  .legacy-place-actions button { min-height: 42px; }
+  .legacy-list { min-height: 0; }
+  .legacy-place { min-height: 58px; align-items: center; }
+  .legacy-place-actions button { min-width: 36px; border-bottom: 0; }
+  .map-stage { inset: 0; height: 100%; transition: opacity .16s ease; }
+  .map-toolbar {
+    top: 60px;
+    right: 10px;
+    left: 10px;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 2px;
+    padding: 8px;
+    border-radius: 12px;
+    overflow: visible;
+  }
+  .map-toolbar :deep(.poi-search) { grid-column: 1 / -1; width: 100%; }
+  .toolbar-divider { display: none; }
+  .toolbar-button { min-height: 38px; padding: 6px 2px; font-size: 11px; }
+  .draft-map-banner { top: 164px; left: 10px; max-width: calc(100% - 20px); }
+  .agent-panel { background: var(--cross-paper); }
+  .agent-title { padding: 14px 16px 10px; }
+  .agent-title .icon-button,
+  .collapsed-rail { display: none; }
+  .trip-brief { grid-template-columns: auto repeat(3, minmax(0, 1fr)); padding: 8px 10px; }
+  .brief-editor { padding-left: 8px; }
+  .agent-scroll { padding: 12px 12px 8px; }
+  .chat-message { max-width: 94%; }
+  .agent-input {
+    padding: 10px max(10px, env(safe-area-inset-right)) 10px max(10px, env(safe-area-inset-left));
+  }
+  .agent-input textarea { min-height: 48px; }
+  .send-button { min-width: 58px; min-height: 48px; }
+}
+
+@media (max-width: 420px) {
+  .legacy-place-actions { display: grid; grid-template-columns: repeat(2, 36px); }
+  .trip-brief { grid-template-columns: 1fr; }
+  .brief-label { display: none; }
+  .brief-item.active { grid-column: 1; }
+  .map-toolbar { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .map-toolbar :deep(.poi-search) { grid-column: 1 / -1; }
+}
 @media (max-width: 900px) { .map-view { overflow-y: auto; } .workspace { min-height: 1100px; } .legacy-sidebar, .agent-panel { top: 12px; bottom: auto; width: calc(100% - 24px); } .legacy-sidebar { left: 12px; height: 360px; } .agent-panel { top: 390px; right: 12px; height: 360px; } .map-stage { top: 760px; height: 520px; } .map-toolbar { left: 12px; right: 12px; } .draft-map-banner { top: 72px; left: 12px; max-width: calc(100% - 24px); } }
 </style>

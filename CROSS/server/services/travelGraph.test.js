@@ -106,3 +106,97 @@ test('a city-stay change is a proposal candidate and shifts later dates', async 
   assert.equal(state.result.trip.totalDays, 10)
   assert.equal(state.result.trip.segments[2].startDate, '2026-08-08')
 })
+
+test('candidate selection stays outside the map and itinerary until generation is confirmed', async () => {
+  const candidate = { id: 'food-1', name: '扬州早茶店', address: '扬州市广陵区', city: '扬州', coordinates: [119.43, 32.39] }
+  const mustGo = { id: 'spot-1', name: '个园', address: '扬州市广陵区', city: '扬州', coordinates: [119.44, 32.40], poiStatus: 'must_go', locked: true }
+  const graph = createTravelGraph({ adapter: fakeAdapter([JSON.stringify({}), JSON.stringify({ action: 'supplement' }), JSON.stringify({}), JSON.stringify({ action: 'create' })]), checkpointer: new MemorySaver() })
+  const thread = `thread-${Math.random()}`
+  const selected = await graph.invoke({
+    body: {
+      message: '我想选这家',
+      constraints: { city: '扬州', days: 2, pace: '适中', interests: ['美食', '经典景点'] },
+      interaction: { type: 'select_candidates', candidateSetId: 'food-set', selectedIds: ['food-1'] },
+      conversationState: {
+        task: { state: 'awaiting_candidate_selection', mode: 'create' },
+        draft: { constraints: { city: '扬州', days: 2, pace: '适中', interests: ['美食'] }, requestedPoiNames: ['个园'], verifiedPois: [mustGo], unresolvedPois: [], pendingCandidates: [], candidateSet: { id: 'food-set', status: 'awaiting_selection', candidates: [candidate], selectedIds: [] }, selectedCandidateIds: [], candidateQuery: '扬州早茶', generationConfirmed: false, plan: null, trip: null, evidence: [] }
+      }
+    }
+  }, { configurable: { thread_id: thread } })
+  assert.equal(selected.result.decision, 'ready_to_generate')
+  assert.equal(selected.result.plan, undefined)
+  assert.equal(selected.result.generationConfirmation.selectedPlaces.length, 2)
+
+  const generated = await graph.invoke({
+    body: {
+      message: '开始生成草案',
+      constraints: { city: '扬州', days: 2, pace: '适中' },
+      interaction: { type: 'confirm_generation' }
+    }
+  }, { configurable: { thread_id: thread } })
+  assert.equal(generated.result.decision, 'create_plan')
+  assert.equal(generated.result.draftPlan.route.destinations.some((item) => item.id === 'food-1'), true)
+  assert.equal(generated.result.draftPlan.route.destinations.some((item) => item.id === 'spot-1'), true)
+})
+
+test('real failure: a pending POI accepts its full name and resumes the original draft', async () => {
+  const zoo = { id: 'zoo-1', name: '红山森林动物园', city: '南京', coordinates: [118.8, 32.1] }
+  const graph = createTravelGraph({
+    adapter: fakeAdapter([JSON.stringify({}), JSON.stringify({ action: 'correction' })]),
+    checkpointer: new MemorySaver()
+  })
+  const state = await graph.invoke({
+    body: {
+      sessionId: `test-${Math.random()}`,
+      message: '红山森林动物园',
+      constraints: { city: '南京', days: 4 },
+      conversationState: {
+        task: { state: 'resolving_places', mode: 'create' },
+        draft: {
+          ...{
+            constraints: { city: '南京', days: 4, pace: '适中' },
+            requestedPoiNames: ['红山动物园'],
+            verifiedPois: [], unresolvedPois: [], pendingCandidates: [zoo],
+            pendingCandidateQuery: '红山动物园', candidateSet: null,
+            selectedCandidateIds: [], selectedPois: [], candidateQuery: '', generationConfirmed: false,
+            plan: null, trip: null, evidence: []
+          }
+        }
+      }
+    }
+  }, { configurable: { thread_id: `thread-${Math.random()}` } })
+
+  assert.equal(state.result.decision, 'ready_to_generate')
+  assert.equal(state.draft.verifiedPois[0].name, '红山森林动物园')
+  assert.deepEqual(state.draft.requestedPoiNames, ['红山森林动物园'])
+  assert.equal(state.draft.pendingCandidates.length, 0)
+})
+
+test('real failure: a numbered pending POI choice accepts "1.地点名"', async () => {
+  const zoo = { id: 'zoo-1', name: '红山森林动物园', city: '南京', coordinates: [118.8, 32.1] }
+  const graph = createTravelGraph({
+    adapter: fakeAdapter([JSON.stringify({}), JSON.stringify({ action: 'chat' })]),
+    checkpointer: new MemorySaver()
+  })
+  const state = await graph.invoke({
+    body: {
+      sessionId: `test-${Math.random()}`,
+      message: '1.红山森林动物园',
+      constraints: { city: '南京', days: 4 },
+      conversationState: {
+        task: { state: 'resolving_places', mode: 'create' },
+        draft: {
+          constraints: { city: '南京', days: 4, pace: '适中' },
+          requestedPoiNames: ['红山动物园'],
+          verifiedPois: [], unresolvedPois: [], pendingCandidates: [zoo],
+          pendingCandidateQuery: '红山动物园', candidateSet: null,
+          selectedCandidateIds: [], selectedPois: [], candidateQuery: '', generationConfirmed: false,
+          plan: null, trip: null, evidence: []
+        }
+      }
+    }
+  }, { configurable: { thread_id: `thread-${Math.random()}` } })
+
+  assert.equal(state.result.decision, 'ready_to_generate')
+  assert.equal(state.draft.verifiedPois[0].id, 'zoo-1')
+})

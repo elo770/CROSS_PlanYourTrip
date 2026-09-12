@@ -114,7 +114,39 @@ export interface AgentMessage {
   draftPlan?: AgentPlanResult
   draftTrip?: Trip
   draftExplanation?: DraftExplanation
+  candidateSet?: AgentCandidateSet
+  generationConfirmation?: AgentGenerationConfirmation
 }
+
+export interface AgentPoiCandidate {
+  id: string
+  name: string
+  address?: string
+  city?: string
+  coordinates?: [number, number]
+}
+
+export interface AgentCandidateSet {
+  id: string
+  query: string
+  city: string
+  status: 'awaiting_selection' | 'selected'
+  candidates: AgentPoiCandidate[]
+  selectedIds: string[]
+  queriedAt?: string
+}
+
+export interface AgentGenerationConfirmation {
+  city: string
+  days: number
+  pace: string
+  selectedPlaces: Array<{ id: string; name: string }>
+  action: 'confirm_generation'
+}
+
+export type AgentInteraction =
+  | { type: 'select_candidates'; candidateSetId: string; selectedIds: string[] }
+  | { type: 'confirm_generation' }
 
 export type AgentSuggestionAction = 'send_message' | 'focus_draft_map' | 'confirm_proposal'
 
@@ -219,7 +251,7 @@ export interface PlanOperation {
 }
 
 export interface AgentChatResponse {
-  decision?: 'answer_only' | 'ask_clarification' | 'create_plan' | 'outline_trip' | 'modify_plan'
+  decision?: 'answer_only' | 'ask_clarification' | 'awaiting_candidate_selection' | 'ready_to_generate' | 'create_plan' | 'outline_trip' | 'modify_plan'
   reply: string
   operations: PlanOperation[]
   plan?: AgentPlanResult
@@ -236,4 +268,6 @@ export interface AgentChatResponse {
   draftPlan?: AgentPlanResult
   draftTrip?: Trip
   draftExplanation?: DraftExplanation
+  candidateSet?: AgentCandidateSet
+  generationConfirmation?: AgentGenerationConfirmation
 }
