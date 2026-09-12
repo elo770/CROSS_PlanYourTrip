@@ -8,7 +8,6 @@ import { applyTripOperations } from './tripModel.js'
 import {
   enrichOperations,
   extractConstraints,
-  generateInitialPlan,
   inferCityFromItinerary,
   normalizeInput,
   poiSummary,
@@ -43,7 +42,7 @@ function runtime(config) {
 }
 
 function emptyTask() {
-  return { state: 'idle', mode: null, paceAsked: false }
+  return { state: 'idle', mode: null, paceAsked: false, next: 'chat' }
 }
 
 function emptyDraft() {
@@ -53,6 +52,12 @@ function emptyDraft() {
     verifiedPois: [],
     unresolvedPois: [],
     pendingCandidates: [],
+    pendingCandidateQuery: '',
+    candidateSet: null,
+    selectedCandidateIds: [],
+    selectedPois: [],
+    candidateQuery: '',
+    generationConfirmed: false,
     plan: null,
     trip: null,
     evidence: []
@@ -148,13 +153,21 @@ function mergeDraft(previous, input, interpretation) {
     city: interpretation.city || input.city || draft.constraints.city,
     days: interpretation.days || input.days || draft.constraints.days,
     pace: interpretation.pace || input.pace || draft.constraints.pace,
-    interests: input.interests?.length ? input.interests : draft.constraints.interests || []
+    interests: uniqueStrings([
+      ...(draft.constraints.interests || []),
+      ...(input.interests || []),
+      ...(interpretation.interests || [])
+    ])
   }
   draft.requestedPoiNames = uniqueStrings([
     ...draft.requestedPoiNames,
     ...(input.poiNames || []),
     ...(interpretation.poiNames || [])
   ])
+  if (interpretation.candidateQuery) {
+    if (draft.candidateQuery !== interpretation.candidateQuery && draft.candidateSet?.query !== interpretation.candidateQuery) draft.candidateSet = null
+    draft.candidateQuery = interpretation.candidateQuery
+  }
   return draft
 }
 
@@ -169,6 +182,41 @@ function isPace(value) {
 function firstNumberChoice(message, count) {
   const choice = Number(String(message || '').match(/^\s*([1-9]\d*)\s*[.、]?\s*$/)?.[1])
   return Number.isInteger(choice) && choice >= 1 && choice <= count ? choice - 1 : -1
+}
+
+function normalizedPoiName(value) {
+  return String(value || '').replace(/[\s()（）,.、．-]/g, '').toLowerCase()
+}
+
+function pendingCandidateChoice(message, candidates = []) {
+  const numbered = String(message || '').match(/^\s*([1-9]\d*)(?:\s*[.、．]?\s*.*)?$/)
+  const choice = Number(numbered?.[1])
+  if (Number.isInteger(choice) && choice >= 1 && choice <= candidates.length) return choice - 1
+
+  const messageName = normalizedPoiName(message)
+  if (!messageName) return -1
+  return candidates.findIndex((candidate) => {
+    const candidateName = normalizedPoiName(candidate.name)
+    return candidateName && (messageName === candidateName || messageName.includes(candidateName) || candidateName.includes(messageName))
+  })
+}
+
+function confirmPendingCandidate(draft, index) {
+  const poi = draft.pendingCandidates[index]
+  if (!poi) return false
+  const originalQuery = draft.pendingCandidateQuery
+  draft.verifiedPois = [
+    ...draft.verifiedPois.filter((item) => item.name !== poi.name),
+    { ...poi, poiStatus: 'must_go', locked: true, source: 'user' }
+  ]
+  draft.requestedPoiNames = uniqueStrings([
+    ...draft.requestedPoiNames.filter((name) => name !== originalQuery),
+    poi.name
+  ])
+  draft.unresolvedPois = draft.unresolvedPois.filter((name) => name !== originalQuery)
+  draft.pendingCandidates = []
+  draft.pendingCandidateQuery = ''
+  return true
 }
 
 function isConfidentPoi(query, city, pois) {
@@ -192,7 +240,8 @@ async function understandMessage(adapter, input, task, draft, signal) {
     'correction 表示用户在纠正地点或之前的理解，绝不修改行程。',
     'modify 仅在用户明确要求改变地点、顺序、天数或节奏时使用。',
     'question 或 analyze 只回答或分析，不创建修改。',
-    '提取用户本句直接表达的 cities、poiNames、pace 和 correctionName；没有就用空值。',
+    '提取用户本句直接表达的 cities、poiNames、interests、pace 和 correctionName；没有就用空值。',
+    'candidateQuery 只在用户明确说了兴趣、品类或区域而需要展示高德候选时填写，例如“扬州早茶”或“北京经典景点”。不能把泛泛的“其余你安排”写成候选查询。',
     '只返回 JSON，不要解释。'
   ].join(' ')
   const { message } = await adapter.complete({
@@ -205,6 +254,7 @@ async function understandMessage(adapter, input, task, draft, signal) {
           extracted: { city: input.city, days: input.days, pace: input.pace, poiNames: input.poiNames },
           task: task?.state || 'idle',
           draft: { city: draft?.constraints?.city, days: draft?.constraints?.days, poiNames: draft?.requestedPoiNames || [] },
+          recentMessages: input.recentMessages?.slice(-4) || [],
           hasExistingTrip: hasExistingTrip(input)
         })
       }
@@ -223,6 +273,8 @@ async function understandMessage(adapter, input, task, draft, signal) {
     pace: isPace(parsed.pace) ? parsed.pace : '',
     cities: uniqueStrings(Array.isArray(parsed.cities) ? parsed.cities : []),
     poiNames: uniqueStrings(Array.isArray(parsed.poiNames) ? parsed.poiNames : []),
+    interests: uniqueStrings(Array.isArray(parsed.interests) ? parsed.interests : []),
+    candidateQuery: text(parsed.candidateQuery, 80),
     correctionName: text(parsed.correctionName, 80),
     explicitChange: Boolean(parsed.explicitChange)
   }
@@ -283,7 +335,7 @@ async function answerWithEvidence(adapter, input, emit, signal) {
   const { message } = await adapter.complete({
     messages: [
       { role: 'system', content: '你是中文旅行规划伙伴。先直接回答。把当前行程、已核实 POI 与一般建议区分开；不要把没有证据的信息说成营业时间、票价、预约、真实班次或实时交通。' },
-      { role: 'user', content: JSON.stringify({ question: input.message, city: input.city, currentPlan: input.currentPlan ? poiSummary(input.currentPlan.route.destinations) : [], verifiedPoi: poi }) }
+      { role: 'user', content: JSON.stringify({ question: input.message, city: input.city, recentMessages: input.recentMessages?.slice(-4) || [], currentPlan: input.currentPlan ? poiSummary(input.currentPlan.route.destinations) : [], verifiedPoi: poi }) }
     ],
     maxTokens: 800, temperature: 0.15, signal
   })
@@ -295,6 +347,10 @@ async function answerWithEvidence(adapter, input, emit, signal) {
 }
 
 function nextStep({ task, draft, interpretation, input, body }) {
+  const interaction = body?.interaction || {}
+  if (interaction.type === 'select_candidates') return 'select_candidates'
+  if (interaction.type === 'confirm_generation') return 'build'
+  if (draft.pendingCandidates?.length && pendingCandidateChoice(input.message, draft.pendingCandidates) >= 0) return 'resolve'
   if (interpretation.action === 'new_task') return 'new_task'
   if (interpretation.action === 'correction') return 'correction'
   if (interpretation.action === 'save') return 'save'
@@ -303,6 +359,7 @@ function nextStep({ task, draft, interpretation, input, body }) {
   if (creating) {
     if (!draft.constraints.city || !draft.constraints.days) return 'collect'
     if (draft.pendingCandidates?.length) return 'resolve'
+    if (draft.candidateSet?.status === 'awaiting_selection') return 'select_candidates'
     if (!draft.constraints.pace) draft.constraints.pace = '适中'
     return 'resolve'
   }
@@ -320,16 +377,20 @@ function routeFor(state) {
 export function createTravelGraph({ adapter = new DeepSeekAdapter(), checkpointer = new MemorySaver() } = {}) {
   const understand = async (state, config) => {
     const { emit, signal } = runtime(config)
-    let input = mergeInput(state.body, state.draft)
+    const savedConversation = state.body?.conversationState || {}
+    const previousDraft = state.draft || savedConversation.draft || emptyDraft()
+    const previousTask = state.task || savedConversation.task || emptyTask()
+    let input = mergeInput(state.body, previousDraft)
     input = await extractConstraints(input, signal, emit, adapter)
     input = await inferCityFromItinerary(input, emit, signal)
-    const interpretation = await understandMessage(adapter, input, state.task, state.draft, signal)
-    const draft = mergeDraft(state.draft, input, interpretation)
-    const task = { ...(state.task || emptyTask()) }
+    const interpretation = await understandMessage(adapter, input, previousTask, previousDraft, signal)
+    const draft = mergeDraft(previousDraft, input, interpretation)
+    const task = { ...previousTask }
     if (interpretation.action === 'create' || interpretation.action === 'supplement') task.mode = 'create'
     task.next = nextStep({ task, draft, interpretation, input, body: state.body })
     task.state = task.next === 'collect' || task.next === 'ask_pace' ? 'collecting_draft'
       : task.next === 'resolve' ? 'resolving_places'
+        : task.next === 'select_candidates' ? 'awaiting_candidate_selection'
         : task.next === 'build' ? 'building_draft'
           : task.next === 'analyze' ? 'analyzing_trip'
             : task.next === 'modify' ? 'editing_draft'
@@ -365,6 +426,7 @@ export function createTravelGraph({ adapter = new DeepSeekAdapter(), checkpointe
     const candidates = searched.ok ? searched.data.pois || [] : []
     draft.requestedPoiNames = uniqueStrings([...draft.requestedPoiNames.filter((name) => name !== query), query])
     draft.pendingCandidates = candidates
+    draft.pendingCandidateQuery = query
     draft.unresolvedPois = candidates.length ? [] : [query]
     draft.evidence.push({ source: 'amap_poi', query, queriedAt: new Date().toISOString(), count: candidates.length })
     return {
@@ -379,12 +441,8 @@ export function createTravelGraph({ adapter = new DeepSeekAdapter(), checkpointe
   const resolve = async (state, config) => {
     const { emit, signal } = runtime(config)
     const draft = structuredClone(state.draft)
-    const selected = firstNumberChoice(state.input.message, draft.pendingCandidates.length)
-    if (selected >= 0) {
-      const poi = draft.pendingCandidates[selected]
-      draft.verifiedPois = [...draft.verifiedPois.filter((item) => item.name !== poi.name), { ...poi, poiStatus: 'must_go', locked: true }]
-      draft.pendingCandidates = []
-    }
+    const selected = pendingCandidateChoice(state.input.message, draft.pendingCandidates)
+    if (selected >= 0) confirmPendingCandidate(draft, selected)
 
     const unresolved = draft.requestedPoiNames.filter((name) => !draft.verifiedPois.some((poi) => poi.name === name || String(poi.name || '').includes(name)))
     for (const query of unresolved) {
@@ -397,6 +455,7 @@ export function createTravelGraph({ adapter = new DeepSeekAdapter(), checkpointe
         draft.verifiedPois.push({ ...candidates[0], poiStatus: 'must_go', locked: true })
       } else if (candidates.length) {
         draft.pendingCandidates = candidates
+        draft.pendingCandidateQuery = query
         return {
           draft,
           task: { ...state.task, state: 'resolving_places' },
@@ -406,12 +465,95 @@ export function createTravelGraph({ adapter = new DeepSeekAdapter(), checkpointe
         draft.unresolvedPois.push(query)
       }
     }
-    return { draft, task: { ...state.task, next: 'build', state: 'building_draft' } }
+    if (draft.candidateQuery && !draft.candidateSet) {
+      emit({ id: 'search-candidate-options', label: '正在整理可选地点', detail: `${draft.constraints.city} · ${draft.candidateQuery}`, toolName: 'search_poi_candidates', status: 'running' })
+      const searched = await executeAgentTool('search_poi_candidates', { query: draft.candidateQuery, city: draft.constraints.city, limit: 8 }, { signal })
+      const candidates = searched.ok ? searched.data.pois || [] : []
+      emit({ id: 'search-candidate-options', label: '可选地点已整理', detail: candidates.length ? `找到 ${candidates.length} 个可核实地点` : '暂时没有可靠候选', toolName: 'search_poi_candidates', status: candidates.length ? 'complete' : 'failed' })
+      draft.candidateSet = {
+        id: crypto.randomUUID(),
+        query: draft.candidateQuery,
+        city: draft.constraints.city,
+        status: 'awaiting_selection',
+        candidates,
+        selectedIds: [],
+        queriedAt: new Date().toISOString()
+      }
+      draft.evidence.push({ source: 'amap_poi', query: draft.candidateQuery, queriedAt: draft.candidateSet.queriedAt, count: candidates.length })
+      return {
+        draft,
+        task: { ...state.task, next: 'select_candidates', state: 'awaiting_candidate_selection' },
+        result: baseResult('awaiting_candidate_selection', state.input,
+          candidates.length
+            ? `我先找到了几处和“${draft.candidateQuery}”有关的地点。你挑想去的，我再和你前面说过的要求一起排；它们现在还没有加入地图或行程。`
+            : `我暂时没有查到可靠的“${draft.candidateQuery}”地点。你可以换一个更具体的品类、区域或店名，我继续帮你找。`,
+          { candidateSet: draft.candidateSet, draft: { constraints: draft.constraints, requestedPoiNames: draft.requestedPoiNames } }
+        )
+      }
+    }
+
+    const selectedCount = draft.verifiedPois.length
+    if (!selectedCount) {
+      return {
+        draft,
+        task: { ...state.task, state: 'collecting_draft' },
+        result: baseResult('ask_clarification', state.input,
+          '这趟旅行的城市和天数我记住了。为了不凭空替你塞地点，你更想补哪一类：经典景点、当地美食、亲子、拍照，还是先告诉我一个具体区域？'
+        )
+      }
+    }
+    return {
+      draft,
+      task: { ...state.task, state: 'awaiting_generation_confirmation' },
+      result: baseResult('ready_to_generate', state.input,
+        `目前我记下了 ${draft.constraints.city} ${draft.constraints.days} 天，以及 ${draft.verifiedPois.map((item) => item.name).join('、')}。如果这些方向没问题，我就先做一版${draft.constraints.pace || '适中'}节奏的草案给你看；保存之前都不会改正式行程。`,
+        { generationConfirmation: { city: draft.constraints.city, days: draft.constraints.days, pace: draft.constraints.pace || '适中', selectedPlaces: draft.verifiedPois.map((item) => ({ id: item.id, name: item.name })), action: 'confirm_generation' } }
+      )
+    }
+  }
+
+  const selectCandidates = async (state) => {
+    const draft = structuredClone(state.draft)
+    const interaction = state.body?.interaction || {}
+    if (interaction.type !== 'select_candidates' || interaction.candidateSetId !== draft.candidateSet?.id) {
+      return {
+        task: { ...state.task, state: 'awaiting_candidate_selection' },
+        result: baseResult('awaiting_candidate_selection', state.input, '你可以在候选地点里勾选想去的几处；勾选只是告诉我你的偏好，还不会加入地图或行程。', { candidateSet: draft.candidateSet })
+      }
+    }
+    const selectedIds = new Set(Array.isArray(interaction.selectedIds) ? interaction.selectedIds : [])
+    const selected = draft.candidateSet.candidates.filter((item) => selectedIds.has(item.id))
+    draft.candidateSet.selectedIds = selected.map((item) => item.id)
+    draft.candidateSet.status = 'selected'
+    draft.selectedCandidateIds = selected.map((item) => item.id)
+    draft.selectedPois = [
+      ...(draft.selectedPois || []),
+      ...selected
+    ].filter((item, index, list) => list.findIndex((candidate) => candidate.id === item.id) === index)
+    draft.generationConfirmed = false
+    return {
+      draft,
+      task: { ...state.task, state: 'awaiting_generation_confirmation' },
+      result: baseResult('ready_to_generate', state.input,
+        selected.length
+          ? `我把 ${selected.map((item) => item.name).join('、')} 记进这次草案的候选清单了。确认后我会把它们和你已指定的地点一起安排；在此之前地图和正式行程不会变化。`
+          : '你这次还没有选择候选地点。我可以保留你已经明确指定的地点生成草案，也可以继续换一组候选给你挑。',
+        { candidateSet: draft.candidateSet, generationConfirmation: { city: draft.constraints.city, days: draft.constraints.days, pace: draft.constraints.pace || '适中', selectedPlaces: [...draft.verifiedPois, ...draft.selectedPois].map((item) => ({ id: item.id, name: item.name })), action: 'confirm_generation' } }
+      )
+    }
   }
 
   const build = async (state, config) => {
     const { emit, signal } = runtime(config)
     const { draft, interpretation } = state
+    if (state.body?.interaction?.type !== 'confirm_generation') {
+      return {
+        task: { ...state.task, state: 'awaiting_generation_confirmation' },
+        result: baseResult('ready_to_generate', state.input, '我先把关键信息整理好了。你点“开始生成草案”后，我再开始排每天的地点。', {
+          generationConfirmation: { city: draft.constraints.city, days: draft.constraints.days, pace: draft.constraints.pace || '适中', selectedPlaces: [...draft.verifiedPois, ...(draft.selectedPois || [])].map((item) => ({ id: item.id, name: item.name })), action: 'confirm_generation' }
+        })
+      }
+    }
     const cities = uniqueStrings(interpretation.cities || [])
     if (cities.length > 1) {
       emit({ id: 'build-outline', label: '正在整理多城市总路线', detail: '先确定城市顺序和停留天数，不生成真实班次', status: 'running' })
@@ -430,10 +572,19 @@ export function createTravelGraph({ adapter = new DeepSeekAdapter(), checkpointe
       city: draft.constraints.city,
       days: draft.constraints.days,
       pace: draft.constraints.pace || '适中',
-      destinations: draft.verifiedPois,
+      destinations: [...draft.verifiedPois, ...(draft.selectedPois || [])],
       poiNames: []
     }
-    const { plan } = await generateInitialPlan(input, emit, signal)
+    const planned = await executeAgentTool('build_trip_plan', {
+      city: input.city,
+      days: input.days,
+      pace: input.pace,
+      destinations: input.destinations,
+      candidates: [],
+      selectedPoiIds: input.destinations.map((item) => item.id)
+    }, { signal })
+    if (!planned.ok) return { result: baseResult('answer_only', input, `这次草案没有生成成功：${planned.error}`) }
+    const plan = planned.data
     const unresolvedNote = draft.unresolvedPois.length ? `“${draft.unresolvedPois.join('、')}”暂未核实，已保留为待补充地点。` : ''
     const draftExplanation = buildDraftExplanation(draft, plan)
     return {
@@ -514,15 +665,16 @@ export function createTravelGraph({ adapter = new DeepSeekAdapter(), checkpointe
     .addNode('new_task', newTask)
     .addNode('correction', correction)
     .addNode('resolve', resolve)
+    .addNode('select_candidates', selectCandidates)
     .addNode('build', build)
     .addNode('answer', answer)
     .addNode('analyze', analyze)
     .addNode('save', save)
     .addNode('modify', modify)
     .addEdge(START, 'understand')
-    .addConditionalEdges('understand', routeFor, { collect: 'collect', ask_pace: 'ask_pace', new_task: 'new_task', correction: 'correction', resolve: 'resolve', build: 'build', answer: 'answer', analyze: 'analyze', save: 'save', modify: 'modify', chat: 'answer' })
-    .addConditionalEdges('resolve', routeFor, { build: 'build', resolve: END })
-    .addEdge('collect', END).addEdge('ask_pace', END).addEdge('new_task', END).addEdge('correction', END)
+    .addConditionalEdges('understand', routeFor, { collect: 'collect', ask_pace: 'ask_pace', new_task: 'new_task', correction: 'correction', resolve: 'resolve', select_candidates: 'select_candidates', build: 'build', answer: 'answer', analyze: 'analyze', save: 'save', modify: 'modify', chat: 'answer' })
+    .addConditionalEdges('resolve', routeFor, { build: 'build', resolve: END, select_candidates: END })
+    .addEdge('collect', END).addEdge('ask_pace', END).addEdge('new_task', END).addEdge('correction', END).addEdge('select_candidates', END)
     .addEdge('build', END).addEdge('answer', END).addEdge('analyze', END).addEdge('save', END).addEdge('modify', END)
     .compile({ checkpointer })
 }
@@ -544,11 +696,26 @@ export async function runTravelGraph(body, emit = () => {}, signal) {
   const runId = crypto.randomUUID()
   runtimeContexts.set(runId, { emit, signal })
   try {
+    const saved = body?.conversationState || {}
     const state = await graph.invoke(
-      { body, usage: { modelCalls: 0, toolCalls: 0 } },
+      {
+        body,
+        task: saved.task || undefined,
+        draft: saved.draft || undefined,
+        usage: { modelCalls: 0, toolCalls: 0 }
+      },
       { configurable: { thread_id: text(body?.sessionId, 100) || crypto.randomUUID(), runId }, recursionLimit: MAX_MODEL_CALLS + 6 }
     )
-    return state.result || baseResult('ask_clarification', state.input || normalizeInput(body), '我还没有得到可用结果，请再试一次。')
+    const result = state.result || baseResult('ask_clarification', state.input || normalizeInput(body), '我还没有得到可用结果，请再试一次。')
+    return {
+      ...result,
+      conversationState: {
+        version: 1,
+        task: state.task || emptyTask(),
+        draft: state.draft || emptyDraft(),
+        updatedAt: new Date().toISOString()
+      }
+    }
   } finally {
     runtimeContexts.delete(runId)
   }

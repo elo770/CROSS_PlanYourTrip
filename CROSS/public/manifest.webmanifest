@@ -1,0 +1,16 @@
+{
+  "name": "越陌 CROSS",
+  "short_name": "CROSS",
+  "description": "地图、日程与预算联动的旅行规划工具",
+  "start_url": "/home",
+  "display": "standalone",
+  "background_color": "#d8dcdd",
+  "theme_color": "#d8dcdd",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "any",
+      "type": "image/x-icon"
+    }
+  ]
+}

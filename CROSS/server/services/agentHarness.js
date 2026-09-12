@@ -106,7 +106,26 @@ export class AgentHarness {
         await this.repository.updateRun(run); await this.repository.appendMessage(run.sessionId, `${run.id}-assistant`, 'assistant', run.result.reply); await this.emit(run, 'proposal.ready', run.result)
         return
       }
-      const result = await this.execute(body, (activity) => { void this.emit(run, 'run.activity', activity) }, signal)
+      const session = await this.repository.getSession(run.sessionId, run.ownerSession)
+      const recentMessages = await this.repository.getRecentMessages(run.sessionId, 10)
+      const result = await this.execute({
+        ...body,
+        sessionId: run.sessionId,
+        recentMessages: recentMessages.length ? recentMessages : body.recentMessages,
+        conversationState: session?.body?.conversationState || body.conversationState
+      }, (activity) => { void this.emit(run, 'run.activity', activity) }, signal)
+      if (result.conversationState) {
+        await this.repository.saveSession({
+          id: run.sessionId,
+          ownerSession: run.ownerSession,
+          tripId: run.tripId || session?.tripId || null,
+          body: {
+            ...(session?.body || {}),
+            workingMemory: run.workingMemory,
+            conversationState: result.conversationState
+          }
+        })
+      }
       run.intent = result.intent || (result.decision === 'answer_only' ? 'answer' : result.decision === 'ask_clarification' ? 'clarify' : ['create_plan', 'outline_trip'].includes(result.decision) ? 'outline_trip' : 'propose_change')
       if (result.decision === 'ask_clarification') {
         run.status = 'waiting_input'; run.result = result

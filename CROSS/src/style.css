@@ -77,6 +77,43 @@ body {
   overflow: hidden;
 }
 
+button,
+input,
+textarea,
+select {
+  touch-action: manipulation;
+}
+
+@media (max-width: 720px) {
+  html,
+  body,
+  #app {
+    height: 100dvh;
+  }
+
+  body {
+    overscroll-behavior-y: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  input,
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+
+  .el-dialog {
+    width: calc(100vw - 24px) !important;
+    max-height: calc(100dvh - 88px);
+    margin-top: 12px !important;
+    overflow-y: auto;
+  }
+
+  .el-message-box {
+    width: calc(100vw - 32px) !important;
+  }
+}
+
 .el-icon {
   color: inherit;
 }
@@ -245,4 +282,3 @@ input[type='checkbox'] {
   --el-button-active-bg-color: rgba(95, 91, 112, 0.3);
   --el-button-active-border-color: rgba(95, 91, 112, 0.5);
 }
-

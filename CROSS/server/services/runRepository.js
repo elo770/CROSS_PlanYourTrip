@@ -1,14 +1,51 @@
 const memoryRuns = new Map()
 const memoryEvents = new Map()
 const memoryProposals = new Map()
+const memorySessions = new Map()
 
 export class RunRepository {
   constructor(pool = null) { this.pool = pool }
 
+  async getSession(id, ownerSession) {
+    const cached = memorySessions.get(id)
+    if (cached) return cached.ownerSession === ownerSession ? structuredClone(cached) : null
+    if (!this.pool) return null
+    const { rows } = await this.pool.query('SELECT id, owner_session, trip_id, body, updated_at FROM agent_sessions WHERE id=$1 AND owner_session=$2', [id, ownerSession])
+    const row = rows[0]
+    return row ? { id: row.id, ownerSession: row.owner_session, tripId: row.trip_id, body: row.body || {}, updatedAt: row.updated_at } : null
+  }
+
+  async saveSession({ id, ownerSession, tripId = null, body = {} }) {
+    const session = { id, ownerSession, tripId, body: structuredClone(body), updatedAt: new Date().toISOString() }
+    memorySessions.set(id, session)
+    if (this.pool) {
+      await this.pool.query(
+        'INSERT INTO agent_sessions (id,owner_session,trip_id,body,updated_at) VALUES ($1,$2,$3,$4::jsonb,NOW()) ON CONFLICT (id) DO UPDATE SET trip_id=EXCLUDED.trip_id,body=EXCLUDED.body,updated_at=NOW()',
+        [id, ownerSession, tripId, JSON.stringify(body)]
+      )
+    }
+    return structuredClone(session)
+  }
+
+  async getRecentMessages(sessionId, limit = 12) {
+    if (!this.pool) return []
+    const { rows } = await this.pool.query(
+      'SELECT role, content, created_at FROM agent_messages WHERE session_id=$1 ORDER BY created_at DESC LIMIT $2',
+      [sessionId, limit]
+    )
+    return rows.reverse().map((row) => ({ role: row.role, content: row.content, createdAt: row.created_at }))
+  }
+
   async createRun(run) {
     memoryRuns.set(run.id, run)
     if (this.pool) {
-      await this.pool.query('INSERT INTO agent_sessions (id,owner_session,trip_id,body,updated_at) VALUES ($1,$2,$3,$4::jsonb,NOW()) ON CONFLICT (id) DO UPDATE SET trip_id=EXCLUDED.trip_id,body=EXCLUDED.body,updated_at=NOW()', [run.sessionId, run.ownerSession, run.tripId || null, JSON.stringify({ workingMemory: run.workingMemory })])
+      const existing = await this.getSession(run.sessionId, run.ownerSession)
+      await this.saveSession({
+        id: run.sessionId,
+        ownerSession: run.ownerSession,
+        tripId: run.tripId || existing?.tripId || null,
+        body: { ...(existing?.body || {}), workingMemory: run.workingMemory }
+      })
       await this.pool.query('INSERT INTO agent_runs (id, session_id, owner_session, trip_id, status, body) VALUES ($1,$2,$3,$4,$5,$6::jsonb)', [run.id, run.sessionId, run.ownerSession, run.tripId || null, run.status, JSON.stringify(run)])
       await this.appendMessage(run.sessionId, `${run.id}-user`, 'user', run.workingMemory?.userGoal || '')
     }
