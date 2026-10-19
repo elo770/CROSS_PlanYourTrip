@@ -1,8 +1,31 @@
 export type POIStatus = 'must_go' | 'optional' | 'avoid'
 
-export type TransportMode = 'walk' | 'metro' | 'taxi' | 'drive'
+export type TransportMode = 'walk' | 'cycle' | 'drive' | 'transit'
+
+export type TransportSegmentStatus = 'loading' | 'ready' | 'failed'
+
+export interface TransportSegment {
+  id: string
+  fromDestinationId: string
+  toDestinationId: string
+  origin: [number, number]
+  destination: [number, number]
+  day: number
+  mode: TransportMode
+  modeSource: 'default' | 'manual' | 'imported'
+  status: TransportSegmentStatus
+  distanceMeters?: number
+  durationSeconds?: number
+  path?: [number, number][]
+  provider?: 'amap'
+  fetchedAt?: string
+  error?: string
+}
 
 export type PlanningStatus = 'scheduled' | 'unscheduled' | 'candidate' | 'rejected'
+
+export type ReservationStatus = 'none' | 'required' | 'booked'
+export type PlaceCategory = 'garden' | 'river' | 'street' | 'food' | 'mountain' | 'temple' | 'venue' | 'night'
 
 export interface Destination {
   id: string
@@ -21,6 +44,9 @@ export interface Destination {
   transportMode?: TransportMode
   travelTimeMinutes?: number
   agentNote?: string
+  reservationStatus?: ReservationStatus
+  reservationNote?: string
+  placeCategory?: PlaceCategory
   planningStatus?: PlanningStatus
   locked?: boolean
   source?: 'user' | 'text_import' | 'ai'
@@ -32,11 +58,13 @@ export interface Route {
   destinations: Destination[]
   totalDistance: number
   estimatedDays: number
+  startDate?: string
+  transportSegments?: TransportSegment[]
 }
 
 export interface DaySchedule {
   day: number
-  date: Date
+  date?: Date
   city: string
   activities: string[]
   accommodation: string
@@ -46,6 +74,7 @@ export interface DaySchedule {
 
 export interface BudgetItem {
   id: string
+  tripId?: string
   day: number
   type: '交通' | '住宿' | '餐饮' | '景点' | '门票' | '购物' | '其他'
   description: string
