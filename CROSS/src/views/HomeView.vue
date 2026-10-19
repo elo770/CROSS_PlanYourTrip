@@ -9,18 +9,7 @@
             <path class="mountain mountain-front" d="M0 334l284-72 244 74 268-88 242 82 278-66 284 74v62H0Z" />
           </g>
 
-          <g class="roamer">
-            <circle class="roamer-outline" cx="3" cy="-94" r="10" />
-            <path class="roamer-structure" d="M-2-84 -3-74M6-85 7-75" />
-            <path class="roamer-outline" d="M-8-73C-24-48-32-18-28 10-26 26-36 38-48 48M10-73C18-50 14-24 20 0 24 16 20 32 26 46" />
-            <path class="roamer-structure" d="M-48 48C-30 54-6 52 26 46" />
-            <path class="roamer-structure" d="M8 10C14 28 16 44 22 60 26 72 28 82 32 92M-10 8C-18 24-24 38-30 52-36 64-40 76-46 88" />
-            <path class="roamer-detail" d="M0 10C4 26 4 42 8 58 10 70 12 80 16 90M-2 8C-8 22-12 34-16 46-20 58-22 70-26 82" />
-            <path class="roamer-structure" d="M-9-68C-20-52-30-36-34-18M11-68C18-56 20-42 16-28" />
-            <path class="roamer-detail" d="M-3-68C-12-54-20-40-22-24M5-68C10-58 12-46 10-34" />
-            <path class="roamer-hair-primary" d="M-6-102C-18-108-30-104-36-92" />
-            <path class="roamer-hair-secondary" d="M-2-104C-14-112-26-110-33-100M2-100C-6-106-14-104-19-98" />
-          </g>
+          <image class="roamer" href="/assets/mascot_full_transparent.svg" x="-54" y="-116" width="100" height="214" />
 
           <g class="seam-mist">
             <path class="seam-mist-back" d="M0 380C180 369 320 386 500 378c190-9 320 12 500 2 190-10 390 6 600-4v24H0Z" />
@@ -43,10 +32,11 @@
           <h2 class="section-title">我的路线</h2>
           <button v-if="savedRoutes.length" class="new-route-button" type="button" @click="requestNewRoute">新建路线</button>
         </div>
+        <p class="local-storage-note">路线和预算只保存在当前浏览器；清除浏览器数据后无法找回。</p>
         <div v-if="savedRoutes.length === 0" class="empty-state">
           <JourneyEmptyState
-            title="还没有形成路线"
-            description="先从一个想去的城市或地点开始，路线、日程和地图会在同一个工作区里逐渐成形。"
+            title="还没有路线"
+            description="从一个想去的地方开始吧。"
             action-label="开始规划"
             @action="requestNewRoute"
           />
@@ -62,13 +52,10 @@
             <template #header>
               <div class="route-card-header">
                 <h3>{{ route.name }}</h3>
-                <el-button
-                  type="danger"
-                  :icon="Delete"
-                  circle
-                  size="small"
-                  @click.stop="handleDeleteRoute(route.id)"
-                />
+                <div class="route-card-actions">
+                  <button type="button" @click.stop="renameRoute(route)">改名</button>
+                  <button type="button" @click.stop="handleDeleteRoute(route.id)">删除</button>
+                </div>
               </div>
             </template>
             <div class="route-card-content">
@@ -112,9 +99,18 @@
                 <span>12 个地点</span>
               </div>
             </div>
-            <el-button type="primary" @click.stop="loadExampleShanghaiSuzhouRoute">
-              加载路线
-            </el-button>
+            <button class="example-load-button" type="button" @click.stop="loadExampleShanghaiSuzhouRoute">加载路线</button>
+          </div>
+        </el-card>
+        <el-card class="example-card" shadow="hover" @click="loadExampleBeijingRoute">
+          <div class="example-card-content">
+            <div class="example-icon"><el-icon><Star /></el-icon></div>
+            <div class="example-info">
+              <h3>北京漫游 2 日</h3>
+              <p>地坛、雍和宫、故宫到后海</p>
+              <div class="example-details"><span>30 个地点 · 2 天</span></div>
+            </div>
+            <button class="example-load-button" type="button" @click.stop="loadExampleBeijingRoute">加载路线</button>
           </div>
         </el-card>
       </div>
@@ -128,8 +124,10 @@ import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useTripStore } from '@/store/trip'
 import { clearLegacyAgentStorageOnce, createDraftTripId, createSavedTripId, getActiveTripId, migrateAgentStorage, setActiveTripId } from '@/lib/agentSessionStorage'
-import { Star, Delete, Location, Calendar } from '@element-plus/icons-vue'
+import { Star, Location, Calendar } from '@element-plus/icons-vue'
 import JourneyEmptyState from '@/components/JourneyEmptyState.vue'
+import { promptRouteName } from '@/lib/routeNamePrompt'
+import type { Route } from '@/types'
 
 const router = useRouter()
 const tripStore = useTripStore()
@@ -151,11 +149,22 @@ function createNewRoute() {
 async function saveCurrentRoute() {
   if (!tripStore.destinations.length) return false
   const previousTripId = getActiveTripId() || tripStore.currentRoute?.id || createDraftTripId()
+  const firstSave = !tripStore.savedRoutes.some((route) => route.id === previousTripId)
+  const name = firstSave
+    ? await promptRouteName(tripStore.currentRoute?.name || '我的旅行路线', '保存路线')
+    : tripStore.currentRoute?.name || '我的旅行路线'
+  if (!name) return false
   const routeId = previousTripId.startsWith('draft-trip-') ? createSavedTripId() : previousTripId
   if (routeId !== previousTripId) migrateAgentStorage(previousTripId, routeId)
-  const route = tripStore.buildCurrentRoute({ id: routeId, name: tripStore.currentRoute?.name || '我的旅行路线' })
+  const route = tripStore.buildCurrentRoute({ id: routeId, name })
+  route.estimatedDays = Math.max(route.estimatedDays, tripStore.currentRoute?.estimatedDays || 1)
   tripStore.setRoute(route)
-  await tripStore.saveRouteToList(route)
+  try {
+    await tripStore.saveRouteToList(route)
+  } catch {
+    ElMessage.error('保存失败：当前浏览器空间不足，请减少照片后重试')
+    return false
+  }
   setActiveTripId(routeId)
   return true
 }
@@ -182,8 +191,7 @@ async function requestNewRoute() {
       confirmButtonText: '保存并新建', cancelButtonText: '放弃并新建',
       distinguishCancelAndClose: true, type: 'warning'
     })
-    await saveCurrentRoute()
-    createNewRoute()
+    if (await saveCurrentRoute()) createNewRoute()
   } catch (action) {
     if (action === 'cancel') createNewRoute()
   }
@@ -196,10 +204,24 @@ function loadExampleShanghaiSuzhouRoute() {
   router.push('/map')
 }
 
+function loadExampleBeijingRoute() {
+  tripStore.loadPresetRoute('beijing-two-day')
+  if (tripStore.currentRoute?.id) setActiveTripId(tripStore.currentRoute.id)
+  ElMessage.success('已加载示例路线：北京漫游 2 日')
+  router.push('/map')
+}
+
 function openRoute(routeId: string) {
   setActiveTripId(routeId)
   tripStore.loadRouteFromList(routeId)
   router.push('/map')
+}
+
+async function renameRoute(route: Route) {
+  const name = await promptRouteName(route.name, '修改路线名称')
+  if (!name || name === route.name) return
+  await tripStore.renameSavedRoute(route.id, name)
+  ElMessage.success('路线名称已更新')
 }
 
 function handleDeleteRoute(routeId: string) {
@@ -291,19 +313,8 @@ function handleDeleteRoute(routeId: string) {
 .seam-mist-front { opacity: .62; }
 
 .roamer {
-  fill: none;
-  stroke: #1d2226;
-  stroke-width: 1.6;
-  stroke-linecap: round;
-  stroke-linejoin: round;
   animation: roamer-breathe 3.4s ease-in-out infinite;
 }
-
-.roamer-outline { stroke-opacity: 0.82; }
-.roamer-structure { stroke-opacity: 0.68; }
-.roamer-detail { stroke-opacity: 0.5; }
-.roamer-hair-primary { stroke-opacity: 0.55; }
-.roamer-hair-secondary { stroke-opacity: 0.38; }
 
 @keyframes roamer-breathe {
   0%, 100% { transform: translate(500px, 300px) rotate(-3deg) scale(.8); }
@@ -339,6 +350,7 @@ function handleDeleteRoute(routeId: string) {
   gap: 8px;
   padding: 10px 18px;
   border: 1px solid rgba(32, 37, 41, .34);
+  border-radius: 6px 11px 7px 9px;
   background: rgba(216, 220, 221, .3);
   color: var(--cross-ink);
   font: inherit;
@@ -393,9 +405,12 @@ function handleDeleteRoute(routeId: string) {
 
 .section-heading .section-title { margin-bottom: 8px; }
 
+.local-storage-note { margin: 0 0 16px; color: var(--cross-ink-soft); font-size: 12px; line-height: 1.6; }
+
 .new-route-button {
-  border: 1px solid var(--cross-ink-faint);
-  border-radius: 5px 8px 5px 6px;
+  border: 0;
+  border-bottom: 1px solid var(--cross-ink-faint);
+  border-radius: 0;
   background: transparent;
   color: var(--cross-ink-soft);
   padding: 6px 10px;
@@ -407,7 +422,7 @@ function handleDeleteRoute(routeId: string) {
 
 .new-route-button:hover,
 .new-route-button:focus-visible {
-  border-color: var(--cross-rust);
+  border-bottom-color: var(--cross-rust);
   color: var(--cross-rust);
   outline: none;
   transform: translateY(-1px);
@@ -434,13 +449,20 @@ function handleDeleteRoute(routeId: string) {
 }
 
 .route-card {
+  border: 1px solid rgba(29, 34, 38, .25);
+  border-radius: 7px 14px 8px 11px;
+  background: rgba(220, 223, 222, .68);
+  box-shadow: none;
   cursor: pointer;
   transition: transform 0.2s;
 }
 
 .route-card:hover {
-  transform: translateY(-4px);
+  transform: translateY(-2px);
+  box-shadow: none;
 }
+
+.route-card :deep(.el-card__header) { border-bottom: 1px dashed rgba(29, 34, 38, .2); }
 
 .route-card-header {
   display: flex;
@@ -454,6 +476,10 @@ function handleDeleteRoute(routeId: string) {
   font-weight: 600;
   color: #1d2226;
 }
+
+.route-card-actions { display: flex; gap: 12px; }
+.route-card-actions button { min-height: 32px; border: 0; border-bottom: 1px solid var(--cross-ink-faint); border-radius: 0; background: transparent; color: var(--cross-ink-soft); padding: 3px 1px; font: inherit; font-size: 12px; cursor: pointer; }
+.route-card-actions button:hover, .route-card-actions button:focus-visible { border-bottom-color: var(--cross-rust); color: var(--cross-rust); outline: none; }
 
 .route-card-content {
   padding: 8px 0;
@@ -479,10 +505,14 @@ function handleDeleteRoute(routeId: string) {
 
 .destination-tag {
   margin: 0;
-  --el-tag-bg-color: rgba(95, 91, 112, 0.16);
-  --el-tag-border-color: rgba(95, 91, 112, 0.34);
+  border-radius: 4px 8px 4px 6px;
+  --el-tag-bg-color: rgba(95, 91, 112, 0.08);
+  --el-tag-border-color: rgba(95, 91, 112, 0.2);
   --el-tag-text-color: #30383d;
 }
+
+.example-load-button { min-height: 34px; border: 1px solid #5368ad; border-radius: 6px 10px 7px 9px; background: transparent; color: var(--cross-ink); padding: 5px 11px; font: inherit; font-size: 12px; cursor: pointer; }
+.example-load-button:hover { background: rgba(101, 117, 172, .12); }
 
 .more-destinations {
   color: rgba(29, 34, 38, 0.46);
@@ -491,12 +521,17 @@ function handleDeleteRoute(routeId: string) {
 }
 
 .example-card {
+  border: 1px solid rgba(29, 34, 38, .25);
+  border-radius: 7px 14px 8px 11px;
+  background: rgba(220, 223, 222, .68);
+  box-shadow: none;
   cursor: pointer;
   transition: transform 0.2s;
 }
 
 .example-card:hover {
-  transform: translateY(-4px);
+  transform: translateY(-2px);
+  box-shadow: none;
 }
 
 .example-card-content {
@@ -571,6 +606,7 @@ function handleDeleteRoute(routeId: string) {
   .examples-section { padding-right: 14px; padding-left: 14px; }
   .section-header { align-items: flex-start; gap: 12px; }
   .new-route-button { min-height: 44px; }
+  .route-card-actions button, .example-load-button { min-height: 44px; }
   .routes-grid { grid-template-columns: 1fr; gap: 12px; }
   .route-card-header h3 { overflow-wrap: anywhere; }
   .route-card:hover,
@@ -586,6 +622,10 @@ function handleDeleteRoute(routeId: string) {
 
   .hero-cta { transition: none; }
   .hero-cta:hover, .new-route-button:hover { transform: none; }
-  .new-route-button { transition: none; }
+  .new-route-button,
+  .route-card,
+  .example-card { transition: none; }
+  .route-card:hover,
+  .example-card:hover { transform: none; }
 }
 </style>

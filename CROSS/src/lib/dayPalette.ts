@@ -1,10 +1,10 @@
 export const DAY_COLORS = [
-  '#596A72',
-  '#5F7167',
-  '#777287',
-  '#9B4B3E',
-  '#8B735A',
-  '#3F5963'
+  '#4E7397',
+  '#2F748A',
+  '#5368AD',
+  '#715DA3',
+  '#744F91',
+  '#596B91'
 ] as const
 
 export const UNSCHEDULED_COLOR = '#30383D'

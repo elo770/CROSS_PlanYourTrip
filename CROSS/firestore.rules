@@ -1,12 +1,11 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // 比赛/演示：任何人可读写。上线请改为登录用户或关闭写权限。
     match /trips/{tripId} {
-      allow read, write: if true;
+      allow read, write: if false;
     }
     match /budget_items/{itemId} {
-      allow read, write: if true;
+      allow read, write: if false;
     }
   }
 }

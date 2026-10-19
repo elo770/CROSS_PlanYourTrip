@@ -148,6 +148,10 @@ const activeMenu = computed(() => route.path)
   border-bottom-color: var(--cross-terracotta);
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .header-menu :deep(.el-menu-item) { transition: none; }
+}
+
 .app-main {
   flex: 0 0 calc(100vh - 60px);
   min-height: 0;

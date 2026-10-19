@@ -5,7 +5,13 @@
         <p>ITINERARY</p>
         <h1>日程安排</h1>
       </div>
-      <button class="sample-action" type="button" @click="loadPresetRoute">加载示例路线</button>
+      <div class="schedule-header-actions">
+        <label v-if="scheduleDays.length" class="route-date">
+          <span>出发日期 <small>整条路线只设一次</small></span>
+          <input :value="tripStore.tripStartDate" type="date" @change="updateStartDate" />
+        </label>
+        <button class="sample-action" type="button" @click="loadPresetRoute">加载示例路线</button>
+      </div>
     </header>
 
     <ol v-if="scheduleDays.length" class="itinerary-list">
@@ -20,29 +26,35 @@
               <p class="day-label" :style="{ color: dayColor(day.day) }">DAY {{ day.day }}</p>
               <h2>{{ day.city || `第 ${day.day} 天` }}</h2>
             </div>
-            <label class="date-editor">
-              <span>日期</span>
-              <input :value="dateInput(day.date)" type="date" @change="updateDate(day.day, $event)" />
-            </label>
+            <time v-if="tripStore.tripStartDate && day.date" class="day-date" :datetime="dateInput(day.date)">{{ dateInput(day.date) }}</time>
           </div>
 
           <ol class="stop-list">
-            <li v-for="(destination, index) in day.destinations" :key="destination.id" class="stop-row">
-              <button class="stop-main" type="button" @click="openInMap(destination)">
-                <span class="stop-index" :style="{ background: dayColor(day.day) }">{{ index + 1 }}</span>
-                <span class="stop-copy">
-                  <strong>{{ destination.name }}</strong>
-                  <small>{{ destination.description || destination.agentNote || '点击在地图中查看这个地点' }}</small>
-                </span>
-                <span class="locate-hint">定位 ↗</span>
-              </button>
-              <div class="stop-actions">
-                <button type="button" :disabled="index === 0" aria-label="上移" @click="reorder(destination.id, 'up')">↑</button>
-                <button type="button" :disabled="index === day.destinations.length - 1" aria-label="下移" @click="reorder(destination.id, 'down')">↓</button>
-                <button type="button" @click="openEditor(destination)">编辑</button>
-                <button type="button" @click="removeDestination(destination)">删除</button>
-              </div>
-            </li>
+            <template v-for="(destination, index) in day.destinations" :key="destination.id">
+              <li v-if="scheduleSegmentBefore(day.destinations, index)" class="schedule-transport-row">
+                <span v-if="scheduleSegmentBefore(day.destinations, index)?.status === 'loading'">正在查询路线…</span>
+                <span v-else-if="scheduleSegmentBefore(day.destinations, index)?.status === 'failed'">未获取到路线</span>
+                <span v-else>{{ transportSummary(scheduleSegmentBefore(day.destinations, index)!) }}</span>
+              </li>
+              <li class="stop-row">
+                <button class="stop-main" type="button" @click="openInMap(destination)">
+                  <span class="stop-index" :style="{ background: dayColor(day.day) }">{{ index + 1 }}</span>
+                  <span class="stop-copy">
+                    <strong>{{ destination.name }} <span v-if="destination.reservationStatus === 'required'" class="reservation-badge required">约</span><span v-else-if="destination.reservationStatus === 'booked'" class="reservation-badge booked">✓</span></strong>
+                    <small>{{ destination.description || destination.agentNote || '点击在地图中查看这个地点' }}</small>
+                    <small v-if="destination.reservationStatus === 'required'">还没预约<template v-if="destination.reservationNote"> · {{ destination.reservationNote }}</template></small>
+                    <small v-else-if="destination.reservationStatus === 'booked'">已预约</small>
+                  </span>
+                  <span class="locate-hint">定位 ↗</span>
+                </button>
+                <div class="stop-actions">
+                  <button type="button" :disabled="index === 0" aria-label="上移" @click="reorder(destination.id, 'up')">↑</button>
+                  <button type="button" :disabled="index === day.destinations.length - 1" aria-label="下移" @click="reorder(destination.id, 'down')">↓</button>
+                  <button type="button" @click="openEditor(destination)">编辑</button>
+                  <button type="button" @click="removeDestination(destination)">删除</button>
+                </div>
+              </li>
+            </template>
           </ol>
         </section>
       </li>
@@ -50,47 +62,26 @@
 
     <JourneyEmptyState
       v-else
-      title="日程还在等第一站"
-      description="先去路线规划加入地点，地图和日程会使用同一份分天与顺序。"
+      title="日程是空的"
+      description="先去规划页添加几个地点。"
       action-label="加载示例路线"
       @action="loadPresetRoute"
     />
 
-    <el-dialog v-model="showEditor" title="编辑行程地点" width="min(440px, calc(100vw - 32px))">
-      <el-form label-position="top">
-        <el-form-item label="地点名称">
-          <el-input v-model.trim="editForm.name" />
-        </el-form-item>
-        <el-form-item label="所属日期">
-          <el-select v-model="editForm.day" class="day-select">
-            <el-option v-for="day in dayOptions" :key="day" :label="`Day ${day}`" :value="day" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="备注">
-          <el-input v-model="editForm.description" type="textarea" :rows="3" placeholder="补充停留重点、预约或交通提醒" />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <button class="dialog-action" type="button" @click="showEditor = false">取消</button>
-        <button class="dialog-action primary" type="button" :disabled="!editForm.name" @click="saveEditor">保存更改</button>
-      </template>
-    </el-dialog>
   </main>
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue'
+import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useTripStore } from '@/store/trip'
 import { dayColor, dayTint } from '@/lib/dayPalette'
-import type { Destination } from '@/types'
+import type { Destination, TransportSegment } from '@/types'
 import JourneyEmptyState from '@/components/JourneyEmptyState.vue'
 
 const tripStore = useTripStore()
 const router = useRouter()
-const showEditor = ref(false)
-const editForm = reactive({ id: '', name: '', description: '', day: 1 })
 
 const scheduledDestinations = computed(() => tripStore.destinations.filter((destination) =>
   destination.planningStatus !== 'unscheduled' &&
@@ -105,12 +96,22 @@ const scheduleDays = computed(() => tripStore.schedule.map((day) => ({
     .sort((a, b) => (a.withinDayOrder || a.order) - (b.withinDayOrder || b.order))
 })))
 
-const dayOptions = computed(() => {
-  const actualDays = [...new Set(scheduledDestinations.value.map((destination) => Number(destination.day || 1)))].sort((a, b) => a - b)
-  if (actualDays.length) return actualDays
-  const fallbackDays = tripStore.currentRoute?.estimatedDays || 1
-  return Array.from({ length: fallbackDays }, (_, index) => index + 1)
-})
+function scheduleSegmentBefore(dayDestinations: Destination[], index: number) {
+  if (index < 1) return undefined
+  const previous = dayDestinations[index - 1]
+  const current = dayDestinations[index]
+  return (tripStore.transportSegments || []).find((segment) =>
+    segment.fromDestinationId === previous.id && segment.toDestinationId === current.id
+  )
+}
+
+function transportSummary(segment: TransportSegment) {
+  const mode = { walk: '步行', cycle: '骑行', drive: '驾车', transit: '公共交通' }[segment.mode]
+  const distance = (segment.distanceMeters || 0) < 1000
+    ? `${Math.round(segment.distanceMeters || 0)} 米`
+    : `${((segment.distanceMeters || 0) / 1000).toFixed(1)} 公里`
+  return `${mode} · ${distance} · ${Math.ceil((segment.durationSeconds || 0) / 60)} 分钟`
+}
 
 function dateInput(date: Date | string) {
   if (typeof date === 'string') return date.slice(0, 10)
@@ -120,30 +121,12 @@ function dateInput(date: Date | string) {
   return `${year}-${month}-${day}`
 }
 
-function updateDate(day: number, event: Event) {
-  const date = (event.target as HTMLInputElement).value
-  if (date) tripStore.updateDayDate(day, date)
+function updateStartDate(event: Event) {
+  tripStore.setTripStartDate((event.target as HTMLInputElement).value)
 }
 
 function openEditor(destination: Destination) {
-  Object.assign(editForm, {
-    id: destination.id,
-    name: destination.name,
-    description: destination.description || destination.agentNote || '',
-    day: Number(destination.day || 1)
-  })
-  showEditor.value = true
-}
-
-function saveEditor() {
-  if (!editForm.id || !editForm.name) return
-  tripStore.updateDestinationDetails(editForm.id, {
-    name: editForm.name,
-    description: editForm.description,
-    day: editForm.day
-  })
-  showEditor.value = false
-  ElMessage.success('日程与地图已同步')
+  router.push({ path: '/map', query: { edit: destination.id } })
 }
 
 function reorder(id: string, direction: 'up' | 'down') {
@@ -199,8 +182,7 @@ function loadPresetRoute() {
 .schedule-header p { color: var(--cross-ink-soft); }
 .schedule-header h1 { margin: 0; font-size: 22px; font-weight: 580; }
 
-.sample-action,
-.dialog-action {
+.sample-action {
   border: 0;
   border-bottom: 1px solid var(--cross-ink-faint);
   border-radius: 0;
@@ -212,8 +194,7 @@ function loadPresetRoute() {
   cursor: pointer;
 }
 
-.sample-action:hover,
-.dialog-action:hover { border-bottom-color: var(--cross-rust); color: var(--cross-rust); }
+.sample-action:hover { border-bottom-color: var(--cross-rust); color: var(--cross-rust); }
 
 .itinerary-list {
   max-width: 980px;
@@ -260,8 +241,10 @@ function loadPresetRoute() {
 }
 .day-heading h2 { margin: 0; font-size: 17px; font-weight: 570; }
 
-.date-editor { display: flex; align-items: center; gap: 10px; color: var(--cross-ink-soft); font-size: 11px; }
-.date-editor input {
+.schedule-header-actions { display: flex; align-items: flex-end; gap: 24px; }
+.route-date { display: flex; flex-direction: column; gap: 4px; color: var(--cross-ink-soft); font-size: 11px; }
+.route-date small { margin-left: 6px; color: var(--cross-ink-soft); font-weight: 400; }
+.route-date input {
   width: 126px;
   border: 0;
   border-bottom: 1px solid var(--cross-ink-faint);
@@ -271,9 +254,11 @@ function loadPresetRoute() {
   padding: 4px 0;
   font: inherit;
 }
-.date-editor input:focus { border-bottom-color: var(--cross-rust); outline: none; }
+.route-date input:focus { border-bottom-color: var(--cross-rust); outline: none; }
+.day-date { color: var(--cross-ink-soft); font-size: 11px; }
 
 .stop-list { margin: 0; padding: 0; list-style: none; border-top: 1px solid rgba(32, 37, 41, .14); }
+.schedule-transport-row { margin-left: 11px; border-left: 1px dashed var(--cross-ink-faint); padding: 7px 0 7px 24px; color: var(--cross-ink-soft); font-size: 11px; list-style: none; }
 .stop-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -310,6 +295,9 @@ function loadPresetRoute() {
 .stop-copy strong,
 .stop-copy small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .stop-copy strong { font-size: 13px; font-weight: 570; color: var(--cross-ink); }
+.reservation-badge { display: inline-flex; min-width: 16px; height: 16px; align-items: center; justify-content: center; vertical-align: 1px; font-size: 10px; line-height: 1; }
+.reservation-badge.required { border: 1px dashed #a94732; border-radius: 5px; color: #a94732; }
+.reservation-badge.booked { border-radius: 4px; background: #5368ad; color: #fff; }
 .stop-copy small { margin-top: 3px; color: var(--cross-ink-soft); font-size: 11px; }
 .locate-hint { color: var(--cross-ink-soft); font-size: 10px; opacity: 0; transition: opacity .18s ease; }
 .stop-main:hover .locate-hint,
@@ -330,22 +318,18 @@ function loadPresetRoute() {
 .stop-actions button:hover { border-bottom-color: var(--cross-rust); color: var(--cross-rust); }
 .stop-actions button:disabled { opacity: .3; cursor: not-allowed; }
 
-.day-select { width: 100%; }
-.dialog-action { margin-left: 14px; }
-.dialog-action.primary { border-bottom-color: var(--cross-rust); color: var(--cross-rust); }
-.dialog-action:disabled { opacity: .4; cursor: not-allowed; }
-
 @media (max-width: 720px) {
   .schedule-view { min-height: 100%; padding: 22px 14px 36px; }
-  .schedule-header { align-items: flex-start; gap: 12px; }
+  .schedule-header { align-items: flex-start; flex-wrap: wrap; gap: 12px; }
+  .schedule-header-actions { align-items: flex-end; gap: 10px; }
+  .route-date input { min-height: 44px; }
   .schedule-header h1 { font-size: 26px; }
   .sample-action { min-height: 44px; padding: 8px 10px; }
   .itinerary-list { margin-top: 24px; }
   .day-block { grid-template-columns: 16px minmax(0, 1fr); }
   .day-content { padding-left: 8px; }
   .day-heading { display: block; }
-  .date-editor { margin-top: 12px; justify-content: flex-start; }
-  .date-editor input { min-height: 42px; }
+  .day-date { display: inline-block; margin-top: 8px; }
   .stop-row { grid-template-columns: 1fr; }
   .stop-main { min-height: 54px; grid-template-columns: 28px minmax(0, 1fr); }
   .stop-actions { display: grid; grid-template-columns: repeat(4, minmax(44px, 1fr)); gap: 4px; padding: 6px 0 0 36px; }

@@ -1,15 +1,7 @@
 ﻿import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import type { AgentPlanResult, Destination, Route, DaySchedule, BudgetItem, TripSnapshot, Trip } from '@/types'
-import { isFirebaseConfigured } from '@/lib/firebase'
-import {
-  fsDeleteBudgetItem,
-  fsDeleteTrip,
-  fsListBudgetItems,
-  fsListTrips,
-  fsSaveBudgetItem,
-  fsSaveTrip
-} from '@/lib/firestoreSync'
+import type { AgentPlanResult, Destination, Route, DaySchedule, BudgetItem, TripSnapshot, Trip, TransportMode, TransportSegment } from '@/types'
+import { defaultTransportMode } from '@/lib/transportRules'
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api'
 
@@ -30,24 +22,16 @@ async function apiRequest<T>(path: string, options: RequestInit = {}): Promise<T
   return response.json() as Promise<T>
 }
 
-function calculateStraightDistanceKm(a: [number, number], b: [number, number]) {
-  const toRad = (value: number) => (value * Math.PI) / 180
-  const earthRadiusKm = 6371
-  const dLat = toRad(b[1] - a[1])
-  const dLng = toRad(b[0] - a[0])
-  const lat1 = toRad(a[1])
-  const lat2 = toRad(b[1])
-  const h =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2
-  return 2 * earthRadiusKm * Math.asin(Math.sqrt(h))
+function segmentId(fromDestinationId: string, toDestinationId: string) {
+  return `${fromDestinationId}--${toDestinationId}`
 }
 
-function calculateRouteDistance(destinations: Destination[]) {
-  return destinations.reduce((sum, dest, index) => {
-    if (index === 0) return sum
-    return sum + calculateStraightDistanceKm(destinations[index - 1].coordinates, dest.coordinates)
-  }, 0)
+function readyTransportDistance(segments: TransportSegment[]) {
+  return segments.reduce((sum, segment) => sum + (segment.status === 'ready' ? segment.distanceMeters || 0 : 0), 0) / 1000
+}
+
+function sameCoordinates(a: [number, number] | undefined, b: [number, number]) {
+  return Boolean(a && a[0] === b[0] && a[1] === b[1])
 }
 
 function isScheduledDestination(destination: Destination) {
@@ -93,9 +77,19 @@ export const useTripStore = defineStore('trip', () => {
   
   // 褰撳墠璺嚎
   const currentRoute = ref<Route | null>(null)
+  const tripStartDate = ref('')
+  const transportSegments = ref<TransportSegment[]>([])
+  const directionRequestVersions = new Map<string, number>()
   
   // 鏃ョ▼瀹夋帓
   const schedule = ref<DaySchedule[]>([])
+
+  function dateForTripDay(day: number) {
+    if (!tripStartDate.value) return undefined
+    const date = new Date(`${tripStartDate.value}T12:00:00`)
+    date.setDate(date.getDate() + day - 1)
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+  }
   
   // 棰勭畻椤圭洰
   const budgetItems = ref<BudgetItem[]>([])
@@ -110,6 +104,163 @@ export const useTripStore = defineStore('trip', () => {
 
   function markRouteSaved() {
     isRouteDirty.value = false
+  }
+
+  function orderedTransportEdges() {
+    const grouped = new Map<number, Destination[]>()
+    destinations.value.filter(isScheduledDestination).forEach((destination) => {
+      const day = Math.max(1, Number(destination.day) || 1)
+      const items = grouped.get(day) || []
+      items.push(destination)
+      grouped.set(day, items)
+    })
+
+    return Array.from(grouped.entries()).flatMap(([day, items]) => {
+      const ordered = items.sort((a, b) => (a.withinDayOrder || a.order) - (b.withinDayOrder || b.order))
+      return ordered.slice(1).map((destination, index) => ({
+        id: segmentId(ordered[index].id, destination.id),
+        day,
+        from: ordered[index],
+        to: destination
+      }))
+    })
+  }
+
+  function syncCurrentRouteTransport() {
+    if (!currentRoute.value) return
+    currentRoute.value = {
+      ...currentRoute.value,
+      destinations: destinations.value,
+      transportSegments: transportSegments.value,
+      totalDistance: readyTransportDistance(transportSegments.value)
+    }
+  }
+
+  function replaceTransportSegment(segment: TransportSegment) {
+    const index = transportSegments.value.findIndex((item) => item.id === segment.id)
+    if (index >= 0) transportSegments.value[index] = segment
+    else transportSegments.value.push(segment)
+    syncCurrentRouteTransport()
+  }
+
+  async function requestDirection(origin: [number, number], destination: [number, number], mode: TransportMode) {
+    return apiRequest<{
+      mode: TransportMode
+      distanceMeters: number
+      durationSeconds: number
+      path: [number, number][]
+      provider: 'amap'
+      fetchedAt: string
+    }>('/directions/segment', {
+      method: 'POST',
+      body: JSON.stringify({ origin, destination, mode })
+    })
+  }
+
+  async function resolveTransportSegment(id: string) {
+    const edge = orderedTransportEdges().find((item) => item.id === id)
+    const current = transportSegments.value.find((item) => item.id === id)
+    if (!edge || !current) return
+
+    const requestVersion = (directionRequestVersions.get(id) || 0) + 1
+    directionRequestVersions.set(id, requestVersion)
+    replaceTransportSegment({ ...current, day: edge.day, status: 'loading', error: undefined, path: undefined })
+
+    try {
+      let mode = current.mode
+      let result
+      if (current.modeSource === 'default') {
+        result = await requestDirection(edge.from.coordinates, edge.to.coordinates, 'walk')
+        mode = defaultTransportMode(result.distanceMeters)
+        if (mode === 'drive') result = await requestDirection(edge.from.coordinates, edge.to.coordinates, 'drive')
+      } else {
+        result = await requestDirection(edge.from.coordinates, edge.to.coordinates, mode)
+      }
+      if (directionRequestVersions.get(id) !== requestVersion || !orderedTransportEdges().some((item) => item.id === id)) return
+      replaceTransportSegment({
+        ...current,
+        day: edge.day,
+        mode,
+        status: 'ready',
+        distanceMeters: result.distanceMeters,
+        durationSeconds: result.durationSeconds,
+        path: result.path,
+        provider: result.provider,
+        fetchedAt: result.fetchedAt,
+        error: undefined
+      })
+    } catch (error) {
+      if (directionRequestVersions.get(id) !== requestVersion || !orderedTransportEdges().some((item) => item.id === id)) return
+      replaceTransportSegment({
+        ...current,
+        day: edge.day,
+        status: 'failed',
+        distanceMeters: undefined,
+        durationSeconds: undefined,
+        path: undefined,
+        error: error instanceof Error ? error.message : '未获取到路线'
+      })
+    }
+  }
+
+  function refreshTransportSegments(options: { forceIds?: string[] } = {}) {
+    const forceIds = new Set(options.forceIds || [])
+    const existing = new Map(transportSegments.value.map((segment) => [segment.id, segment]))
+    const now = Date.now()
+    const edges = orderedTransportEdges()
+    transportSegments.value = edges.map((edge) => {
+      const saved = existing.get(edge.id)
+      const coordinatesChanged = saved && (
+        !sameCoordinates(saved.origin, edge.from.coordinates) ||
+        !sameCoordinates(saved.destination, edge.to.coordinates)
+      )
+      return saved
+        ? {
+            ...saved,
+            origin: edge.from.coordinates,
+            destination: edge.to.coordinates,
+            day: edge.day,
+            ...(coordinatesChanged ? {
+              status: 'loading' as const,
+              distanceMeters: undefined,
+              durationSeconds: undefined,
+              path: undefined,
+              fetchedAt: undefined,
+              error: undefined
+            } : {})
+          }
+        : {
+            id: edge.id,
+            fromDestinationId: edge.from.id,
+            toDestinationId: edge.to.id,
+            origin: edge.from.coordinates,
+            destination: edge.to.coordinates,
+            day: edge.day,
+            mode: 'walk' as const,
+            modeSource: 'default' as const,
+            status: 'loading' as const
+          }
+    })
+    syncCurrentRouteTransport()
+
+    for (const segment of transportSegments.value) {
+      const isFresh = segment.status === 'ready' && segment.fetchedAt && now - new Date(segment.fetchedAt).getTime() < 24 * 60 * 60 * 1000
+      if (!forceIds.has(segment.id) && (isFresh || segment.status === 'failed')) continue
+      void resolveTransportSegment(segment.id)
+    }
+  }
+
+  function setTransportMode(id: string, mode: TransportMode) {
+    const segment = transportSegments.value.find((item) => item.id === id)
+    if (!segment) return
+    replaceTransportSegment({ ...segment, mode, modeSource: 'manual', status: 'loading', fetchedAt: undefined })
+    markRouteDirty()
+    void resolveTransportSegment(id)
+  }
+
+  function retryTransportSegment(id: string) {
+    if (!transportSegments.value.some((segment) => segment.id === id)) return
+    void resolveTransportSegment(id)
   }
   
   // 璁＄畻灞炴€?
@@ -142,10 +293,6 @@ export const useTripStore = defineStore('trip', () => {
       schedule.value = []
       return
     }
-    const base = scheduled[0]?.date ? new Date(scheduled[0].date as string) : new Date()
-    if (!scheduled[0]?.date) {
-      base.setHours(0, 0, 0, 0)
-    }
     const grouped = new Map<number, Destination[]>()
     scheduled.forEach((dest) => {
       const day = Math.max(1, Number(dest.day) || 1)
@@ -158,12 +305,10 @@ export const useTripStore = defineStore('trip', () => {
       .map(([day, items]) => {
         const ordered = items.slice().sort((a, b) => (a.withinDayOrder || a.order) - (b.withinDayOrder || b.order))
         ordered.forEach((dest, index) => { dest.withinDayOrder = index + 1 })
-        const dayDate = ordered[0]?.date
-          ? new Date(ordered[0].date as string)
-          : new Date(base.getTime() + (day - 1) * 86400000)
+        const date = dateForTripDay(day)
         return {
           day,
-          date: dayDate,
+          date: date ? new Date(`${date}T00:00:00`) : undefined,
           city: currentRoute.value?.name || ordered[0]?.name || '',
           activities: ordered.map((dest) => `${dest.withinDayOrder}. ${dest.name}`),
           accommodation: '',
@@ -184,12 +329,12 @@ export const useTripStore = defineStore('trip', () => {
       grouped.set(day, items)
     })
 
-    const ordered = Array.from(grouped.entries())
+    const ordered: Destination[] = [...Array.from(grouped.entries())
       .sort((a, b) => a[0] - b[0])
       .flatMap(([, items]) => items
         .sort((a, b) => (a.withinDayOrder || a.order) - (b.withinDayOrder || b.order))
-        .map((destination, index) => ({ ...destination, withinDayOrder: index + 1 })))
-      .concat(unscheduled.map((destination) => ({ ...destination })))
+        .map((destination, index) => ({ ...destination, withinDayOrder: index + 1, date: dateForTripDay(destination.day || 1) }))),
+      ...unscheduled.map((destination) => ({ ...destination, date: undefined }))]
       .map((destination, index) => ({ ...destination, order: index + 1 }))
 
     destinations.value = normalizeDestinations(ordered)
@@ -198,11 +343,12 @@ export const useTripStore = defineStore('trip', () => {
       currentRoute.value = {
         ...currentRoute.value,
         destinations: destinations.value,
-        totalDistance: calculateRouteDistance(routeDestinations),
+        totalDistance: readyTransportDistance(transportSegments.value),
         estimatedDays: Math.max(new Set(routeDestinations.map((destination) => destination.day || 1)).size, 1)
       }
     }
     regenerateScheduleFromDestinations(destinations.value)
+    refreshTransportSegments()
     markRouteDirty()
   }
 
@@ -234,14 +380,32 @@ export const useTripStore = defineStore('trip', () => {
       .filter((destination) => destination.id !== id && isScheduledDestination(destination) && Number(destination.day || 1) === safeDay)
       .sort((a, b) => (a.withinDayOrder || a.order) - (b.withinDayOrder || b.order))
     const insertAt = Math.max(0, Math.min(targetIndex ?? targetItems.length, targetItems.length))
-    targetItems.splice(insertAt, 0, { ...current, day: safeDay })
+    targetItems.splice(insertAt, 0, { ...current, day: safeDay, planningStatus: 'scheduled' })
     const targetOrder = new Map(targetItems.map((destination, index) => [destination.id, index + 1]))
 
     commitDestinationEdits(destinations.value.map((destination) => {
-      if (destination.id === id) return { ...destination, day: safeDay, withinDayOrder: targetOrder.get(id) }
+      if (destination.id === id) return {
+        ...destination,
+        day: safeDay,
+        withinDayOrder: targetOrder.get(id),
+        planningStatus: 'scheduled' as const
+      }
       const order = targetOrder.get(destination.id)
       return order ? { ...destination, withinDayOrder: order } : destination
     }))
+  }
+
+  function moveDestinationToUnscheduled(id: string) {
+    commitDestinationEdits(destinations.value.map((destination) => destination.id === id
+      ? { ...destination, day: undefined, withinDayOrder: undefined, planningStatus: 'unscheduled' as const }
+      : destination))
+  }
+
+  function setTripStartDate(startDate: string) {
+    if (startDate && Number.isNaN(new Date(`${startDate}T12:00:00`).getTime())) return
+    tripStartDate.value = startDate
+    if (currentRoute.value) currentRoute.value = { ...currentRoute.value, startDate: startDate || undefined }
+    commitDestinationEdits(destinations.value)
   }
 
   function reorderDestinationWithinDay(id: string, direction: 'up' | 'down') {
@@ -283,20 +447,27 @@ export const useTripStore = defineStore('trip', () => {
   function restoreTripSnapshot(snapshot: TripSnapshot) {
     destinations.value = normalizeDestinations(snapshot.destinations || [])
     currentRoute.value = snapshot.route ? { ...snapshot.route, destinations: destinations.value } : null
-    schedule.value = (snapshot.schedule || []).map((day) => ({ ...day, date: new Date(day.date) }))
+    tripStartDate.value = snapshot.route?.startDate || ''
+    transportSegments.value = snapshot.route?.transportSegments || []
+    schedule.value = (snapshot.schedule || []).map((day) => ({ ...day, date: day.date ? new Date(day.date) : undefined }))
+    refreshTransportSegments()
     markRouteDirty()
   }
 
   function applyAgentPlan(plan: AgentPlanResult, options: { markDirty?: boolean } = {}) {
     const normalized = normalizeDestinations(plan.route.destinations || [])
     destinations.value = normalized
+    transportSegments.value = plan.route.transportSegments || []
     currentRoute.value = {
       ...plan.route,
       destinations: normalized,
-      totalDistance: calculateRouteDistance(normalized.filter(isScheduledDestination))
+      transportSegments: transportSegments.value,
+      totalDistance: readyTransportDistance(transportSegments.value)
     }
-    schedule.value = (plan.schedule || []).map((day) => ({ ...day, date: new Date(day.date) }))
+    tripStartDate.value = plan.route.startDate || ''
+    schedule.value = (plan.schedule || []).map((day) => ({ ...day, date: day.date ? new Date(day.date) : undefined }))
     if (!schedule.value.length) regenerateScheduleFromDestinations(normalized)
+    refreshTransportSegments()
     if (options.markDirty !== false) markRouteDirty()
   }
 
@@ -313,19 +484,11 @@ export const useTripStore = defineStore('trip', () => {
     markRouteDirty()
   }
 
-  async function loadTrip(tripId: string) {
-    const trip = await apiRequest<Trip>(`/trips/${tripId}`, { credentials: 'include' })
-    currentTrip.value = trip
-    const detailed = trip.segments.find((segment) => segment.status === 'detailed')
-    if (detailed) applyAgentPlan({ route: { id: trip.id, name: trip.title, destinations: detailed.destinations, estimatedDays: detailed.days, totalDistance: 0 }, schedule: detailed.schedule, warnings: [] }, { markDirty: false })
-    markRouteSaved()
-    return trip
-  }
-
   // 娣诲姞鐩殑鍦?
   function addDestination(destination: Destination) {
     destinations.value.push(destination)
     regenerateScheduleFromDestinations(destinations.value)
+    refreshTransportSegments()
     markRouteDirty()
   }
 
@@ -336,6 +499,7 @@ export const useTripStore = defineStore('trip', () => {
       destinations.value.splice(index, 1)
     }
     regenerateScheduleFromDestinations(destinations.value)
+    refreshTransportSegments()
     markRouteDirty()
   }
 
@@ -343,6 +507,7 @@ export const useTripStore = defineStore('trip', () => {
   function updateDestinationOrder(newOrder: Destination[]) {
     destinations.value = newOrder
     regenerateScheduleFromDestinations(destinations.value)
+    refreshTransportSegments()
     markRouteDirty()
   }
 
@@ -360,24 +525,30 @@ export const useTripStore = defineStore('trip', () => {
       }
     }
     regenerateScheduleFromDestinations(destinations.value)
+    refreshTransportSegments()
     markRouteDirty()
   }
 
   // 璁剧疆褰撳墠璺嚎锛涢粯璁ゆ牴鎹洰鐨勫湴閲嶇畻鏃ョ▼锛岄璁捐矾绾垮彲 skip
   function setRoute(route: Route | null, opts?: { skipScheduleRegeneration?: boolean }) {
     currentRoute.value = route
-    if (opts?.skipScheduleRegeneration) return
-    if (route?.destinations?.length) {
+    tripStartDate.value = route?.startDate || ''
+    transportSegments.value = route?.transportSegments || []
+    if (!opts?.skipScheduleRegeneration && route?.destinations?.length) {
       regenerateScheduleFromDestinations(route.destinations)
-    } else {
+    } else if (!opts?.skipScheduleRegeneration) {
       schedule.value = []
     }
+    if (route) refreshTransportSegments()
   }
 
   function clearPlanningState(options: { markDirty?: boolean } = {}) {
     destinations.value = []
     currentTrip.value = null
     currentRoute.value = null
+    tripStartDate.value = ''
+    transportSegments.value = []
+    directionRequestVersions.clear()
     schedule.value = []
     if (options.markDirty !== false) markRouteDirty()
   }
@@ -388,8 +559,10 @@ export const useTripStore = defineStore('trip', () => {
       id: opts?.id || currentRoute.value?.id || `trip-${Date.now()}`,
       name: opts?.name || currentRoute.value?.name || '鎴戠殑鏃呰璺嚎',
       destinations: destinations.value,
-      totalDistance: calculateRouteDistance(scheduled),
-      estimatedDays: Math.max(new Set(scheduled.map((dest) => dest.day || 1)).size, 1)
+      transportSegments: transportSegments.value,
+      totalDistance: readyTransportDistance(transportSegments.value),
+      estimatedDays: Math.max(1, ...scheduled.map((dest) => Number(dest.day) || 1)),
+      startDate: tripStartDate.value || undefined
     }
   }
 
@@ -422,42 +595,23 @@ export const useTripStore = defineStore('trip', () => {
   
   // 娣诲姞棰勭畻椤?
   async function addBudgetItem(item: BudgetItem) {
-    budgetItems.value.push(item)
-    try {
-      if (isFirebaseConfigured()) {
-        await fsSaveBudgetItem(item)
-      } else {
-        await apiRequest('/budget', {
-          method: 'POST',
-          body: JSON.stringify(item)
-        })
-      }
-    } catch (error) {
-      console.warn('Failed to sync budget item:', error)
-    }
+    const nextItems = [...budgetItems.value, item]
+    localStorage.setItem('budgetItems', JSON.stringify(nextItems))
+    budgetItems.value = nextItems
   }
   
   // 鍒犻櫎棰勭畻椤?
   async function removeBudgetItem(id: string) {
-    const index = budgetItems.value.findIndex(item => item.id === id)
-    if (index > -1) {
-      budgetItems.value.splice(index, 1)
-    }
-    try {
-      if (isFirebaseConfigured()) {
-        await fsDeleteBudgetItem(id)
-      } else {
-        await apiRequest(`/budget/${id}`, { method: 'DELETE' })
-      }
-    } catch (error) {
-      console.warn('Failed to delete budget item:', error)
-    }
+    const nextItems = budgetItems.value.filter(item => item.id !== id)
+    localStorage.setItem('budgetItems', JSON.stringify(nextItems))
+    budgetItems.value = nextItems
   }
   
   // 鍔犺浇棰勮璺嚎
   function loadPresetRoute(routeName: string) {
     if (routeName === 'europe-free') loadEuropeFreeRoute()
     if (routeName === 'jiangzhehu') loadJiangZheHuRoute()
+    if (routeName === 'beijing-two-day') loadBeijingTwoDayRoute()
     markRouteDirty()
   }
   
@@ -467,36 +621,31 @@ export const useTripStore = defineStore('trip', () => {
     const routeToSave = {
       ...route,
       destinations: cleanedDestinations,
-      totalDistance: calculateRouteDistance(cleanedDestinations),
+      transportSegments: route.transportSegments || transportSegments.value,
+      totalDistance: readyTransportDistance(route.transportSegments || transportSegments.value),
       estimatedDays: Math.max(route.estimatedDays || cleanedDestinations.length || 1, 1)
     }
-    const existingIndex = savedRoutes.value.findIndex(r => r.id === routeToSave.id)
+    const nextRoutes = [...savedRoutes.value]
+    const existingIndex = nextRoutes.findIndex(r => r.id === routeToSave.id)
     if (existingIndex > -1) {
-      savedRoutes.value[existingIndex] = routeToSave
+      nextRoutes[existingIndex] = routeToSave
     } else {
-      savedRoutes.value.push(routeToSave)
+      nextRoutes.push(routeToSave)
     }
-    // 淇濆瓨鍒?localStorage
-    localStorage.setItem('savedRoutes', JSON.stringify(savedRoutes.value))
-
-    try {
-      if (isFirebaseConfigured()) {
-        await fsSaveTrip(routeToSave)
-      } else if (existingIndex > -1) {
-        await apiRequest(`/trips/${routeToSave.id}`, {
-          method: 'PUT',
-          body: JSON.stringify(routeToSave)
-        })
-      } else {
-        await apiRequest('/trips', {
-          method: 'POST',
-          body: JSON.stringify(routeToSave)
-        })
-      }
-    } catch (error) {
-      console.warn('Failed to sync route:', error)
-    }
+    localStorage.setItem('savedRoutes', JSON.stringify(nextRoutes))
+    savedRoutes.value = nextRoutes
     markRouteSaved()
+  }
+
+  async function renameSavedRoute(routeId: string, name: string) {
+    const index = savedRoutes.value.findIndex((route) => route.id === routeId)
+    if (index < 0) return
+    const renamed = { ...savedRoutes.value[index], name }
+    const nextRoutes = [...savedRoutes.value]
+    nextRoutes[index] = renamed
+    localStorage.setItem('savedRoutes', JSON.stringify(nextRoutes))
+    savedRoutes.value = nextRoutes
+    if (currentRoute.value?.id === routeId) currentRoute.value = { ...currentRoute.value, name }
   }
   
   // 浠庡垪琛ㄥ姞杞借矾绾?
@@ -506,13 +655,17 @@ export const useTripStore = defineStore('trip', () => {
       // localStorage / 鍚庣鍥炴潵鐨勬暟鎹彲鑳藉瓨鍦ㄥ潗鏍囦负 string 鐨勬儏鍐碉紝杩欎細瀵艰嚧鍦板浘瑕佺礌涓嶆覆鏌?
       const cleanedDestinations = normalizeDestinations(route.destinations || [])
       destinations.value = cleanedDestinations
+      transportSegments.value = route.transportSegments || []
       currentRoute.value = {
         ...route,
         destinations: cleanedDestinations,
-        totalDistance: calculateRouteDistance(cleanedDestinations),
+        transportSegments: transportSegments.value,
+        totalDistance: readyTransportDistance(transportSegments.value),
         estimatedDays: Math.max(route.estimatedDays || cleanedDestinations.length || 1, 1)
       }
+      tripStartDate.value = route.startDate || ''
       regenerateScheduleFromDestinations(cleanedDestinations)
+      refreshTransportSegments()
       currentTrip.value = null
       markRouteSaved()
     }
@@ -520,20 +673,9 @@ export const useTripStore = defineStore('trip', () => {
   
   // 鍒犻櫎璺嚎
   async function deleteRoute(routeId: string) {
-    const index = savedRoutes.value.findIndex(r => r.id === routeId)
-    if (index > -1) {
-      savedRoutes.value.splice(index, 1)
-      localStorage.setItem('savedRoutes', JSON.stringify(savedRoutes.value))
-    }
-    try {
-      if (isFirebaseConfigured()) {
-        await fsDeleteTrip(routeId)
-      } else {
-        await apiRequest(`/trips/${routeId}`, { method: 'DELETE' })
-      }
-    } catch (error) {
-      console.warn('Failed to delete route:', error)
-    }
+    const nextRoutes = savedRoutes.value.filter(r => r.id !== routeId)
+    localStorage.setItem('savedRoutes', JSON.stringify(nextRoutes))
+    savedRoutes.value = nextRoutes
   }
   
   // 鍒濆鍖栨椂鍔犺浇淇濆瓨鐨勮矾绾?
@@ -546,45 +688,72 @@ export const useTripStore = defineStore('trip', () => {
         console.error('Failed to load saved routes', e)
       }
     }
-
-    // 鍐嶅皾璇曚粠鍚庣鍚屾锛岃鐩栨湰鍦版棫鏁版嵁
-    void syncFromServer()
-  }
-
-  async function syncFromServer() {
+    const savedBudget = localStorage.getItem('budgetItems')
+    if (!savedBudget) return
     try {
-      if (isFirebaseConfigured()) {
-        const [trips, items] = await Promise.all([fsListTrips(), fsListBudgetItems()])
-        if (Array.isArray(trips)) {
-          savedRoutes.value = trips
-          localStorage.setItem('savedRoutes', JSON.stringify(savedRoutes.value))
-        }
-        if (Array.isArray(items)) {
-          budgetItems.value = items
-        }
-        return
-      }
-
-      const [tripData, budgetData] = await Promise.all([
-        apiRequest<{ trips?: Route[] }>('/trips'),
-        apiRequest<{ items?: BudgetItem[] }>('/budget')
-      ])
-
-      if (Array.isArray(tripData.trips)) {
-        savedRoutes.value = tripData.trips
-        localStorage.setItem('savedRoutes', JSON.stringify(savedRoutes.value))
-      }
-
-      if (Array.isArray(budgetData.items)) {
-        budgetItems.value = budgetData.items
-      }
+      const items = JSON.parse(savedBudget)
+      if (Array.isArray(items)) budgetItems.value = items
     } catch (error) {
-      console.warn('Failed to fetch initial data:', error)
+      console.warn('Failed to load saved budget items:', error)
     }
   }
   
   // 鍒濆鍖?
   initSavedRoutes()
+
+  function loadBeijingTwoDayRoute() {
+    type SampleStop = { name: string; description: string; coordinates: [number, number]; placeCategory?: Destination['placeCategory'] }
+    const dayOne: SampleStop[] = [
+      { name: '地铁雍和宫A口', description: '逛完挺快的，动线很明确基本就是走一个长方形', coordinates: [116.417044, 39.949626] },
+      { name: '地坛公园', description: '公园属性，大部分是绿植，适合散心', coordinates: [116.414443, 39.953777] },
+      { name: '五道营胡同', description: '全是小店', coordinates: [116.412109, 39.948467] },
+      { name: '观夏(国子监旗舰店)', description: '太高端了一个人不敢进，两个人还行', coordinates: [116.411781, 39.945597] },
+      { name: '南门', description: '从这里进国子监', coordinates: [116.413257, 39.945613] },
+      { name: '国子监', description: '我去的时候没什么人，不过也不是很有意思，就是看看建筑，看看墙上的介绍', coordinates: [116.413285, 39.946777] },
+      { name: '雍和宫', description: '虔诚', coordinates: [116.417296, 39.947239] },
+      { name: '紫光园酸奶站', description: '奶皮子酸奶，不过感觉奶皮子酸奶都一样', coordinates: [116.416857, 39.944792] },
+      { name: '雍和炸鸡烧饼', description: '一般', coordinates: [116.41691, 39.942623] },
+      { name: '鸦儿李记·清真烤鸭(北新桥店)', description: '烧饼第一口很普通，越吃越香，不过我记得只要一两块钱，建议买几个在路上当干粮，而且买烧饼的北京大爷大妈也挺多的，重在地道！', coordinates: [116.416966, 39.942051] },
+      { name: '烘焙町面包店', description: '听说挺好吃的，但是之前都吃饱了没买过', coordinates: [116.416937, 39.941783] },
+      { name: '余婆炸鸡', description: '一般吧，不难吃，但是也没多惊人的美味', coordinates: [116.416937, 39.941692] },
+      { name: '梅潭村·糕饼铺', description: '惊人的美味！非常醇厚的奶酪芝士香，有一点点酸~上海or苏州有没有类似的啊，离开北京最心痛的事情之一就是没法吃到梅潭村的芝士酥', coordinates: [116.416985, 39.940544] },
+      { name: '晨阳·北新桥烤鱿鱼', description: '炸串挺好吃的，听说西红柿炒刀削更好吃，下次尝尝', coordinates: [116.417059, 39.939628] },
+      { name: '龍囍粤', description: '生滚粥好喝，甜品虽小但便宜，总体无功无过吧', coordinates: [116.417028, 39.939562], placeCategory: 'food' },
+      { name: '北新桥C口，回家了孩子', description: '昏黄的灯光，古朴的胡同，满足你对北京胡同的一切美好幻想，最重要的是——没什么小商店，随便出片', coordinates: [116.417656, 39.940259] }
+    ]
+    const dayTwo: SampleStop[] = [
+      { name: '北京站', description: '东城区 · 毛家湾胡同甲13号', coordinates: [116.427354, 39.90283] },
+      { name: '中国国家博物馆', description: '据说逛一次巨累，主播现在仍未鼓起勇气前往', coordinates: [116.401304, 39.905374] },
+      { name: '天安门', description: '东城区 · 长安街北侧', coordinates: [116.397463, 39.909187] },
+      { name: '故宫博物院', description: '北京市东城区 · 景山前街4号', coordinates: [116.397029, 39.917839] },
+      { name: '景山公园', description: '北京市西城区 · 景山西街44号', coordinates: [116.396551, 39.925875] },
+      { name: '什刹海地铁站A2西北口', description: '故宫、国博逛完巨累，景山公园和天安门还好，大家依据体力选择吧', coordinates: [116.395822, 39.938272] },
+      { name: '喜乐铺炸货(方砖厂店)', description: '土豆泥炸鸡，说是老北京的jollibee，感觉就是好吃的炸鸡，没那么惊艳，不排队可以去', coordinates: [116.399884, 39.938074] },
+      { name: '梅潭村·糕饼铺(鼓楼店)', description: '挚爱（芝士酥）', coordinates: [116.396174, 39.939407] },
+      { name: '紫光园·酸奶站(鼓楼福京熹店)', description: '没吃过的建议买一个', coordinates: [116.395913, 39.93955] },
+      { name: '烤肉刘·清真(鼓楼什刹海店)', description: '挺好吃的', coordinates: [116.395867, 39.939812] },
+      { name: '鼓楼', description: '在外面看看可以了', coordinates: [116.395937, 39.940781] },
+      { name: '烟袋斜街', description: '警官，借个胆爱你 的朝圣之地，一直在做梦能在路上听见空哥的声音', coordinates: [116.394748, 39.939329] },
+      { name: '后海酒吧街', description: '什刹海最好玩的地方（bushi）', coordinates: [116.392678, 39.939541] },
+      { name: '清真•鸦儿李记•小馆(后海店)', description: '我爱的麻将烧饼又来了', coordinates: [116.393101, 39.939526] }
+    ]
+    const places: Destination[] = [dayOne, dayTwo].flatMap((stops, dayIndex) => stops.map((stop, index) => ({
+      id: `beijing-day-${dayIndex + 1}-stop-${index + 1}`,
+      ...stop,
+      order: dayIndex === 0 ? index + 1 : dayOne.length + index + 1,
+      day: dayIndex + 1,
+      withinDayOrder: index + 1,
+      planningStatus: 'scheduled'
+    })))
+    destinations.value = places
+    setRoute({
+      id: `beijing-sample-${crypto.randomUUID()}`,
+      name: '北京漫游1',
+      destinations: places,
+      totalDistance: 0,
+      estimatedDays: 2
+    })
+  }
   
   function loadEuropeFreeRoute() {
     const startDate = new Date('2026-06-01')
@@ -620,16 +789,21 @@ export const useTripStore = defineStore('trip', () => {
       id: 'euro_2026_03',
       name: '欧洲轻松自由行（6天示例）',
       destinations: europe,
-      totalDistance: calculateRouteDistance(europe),
+      totalDistance: 0,
       estimatedDays: 6
     }
 
-    budgetItems.value = [
-      { id: 'b1', day: 1, type: '交通', amount: 6200, currency: 'CNY', description: '往返欧洲机票' },
-      { id: 'b2', day: 1, type: '住宿', amount: 5600, currency: 'CNY', description: '5晚酒店/民宿' },
-      { id: 'b3', day: 1, type: '餐饮', amount: 1800, currency: 'CNY', description: '日常餐饮预算' },
-      { id: 'b4', day: 1, type: '门票', amount: 900, currency: 'CNY', description: '博物馆与景点门票' }
+    const exampleBudget: BudgetItem[] = [
+      { id: 'b1', tripId: route.id, day: 1, type: '交通', amount: 6200, currency: 'CNY', description: '往返欧洲机票' },
+      { id: 'b2', tripId: route.id, day: 1, type: '住宿', amount: 5600, currency: 'CNY', description: '5晚酒店/民宿' },
+      { id: 'b3', tripId: route.id, day: 1, type: '餐饮', amount: 1800, currency: 'CNY', description: '日常餐饮预算' },
+      { id: 'b4', tripId: route.id, day: 1, type: '门票', amount: 900, currency: 'CNY', description: '博物馆与景点门票' }
     ]
+    if (!budgetItems.value.some(item => item.tripId === route.id)) {
+      const nextItems = [...budgetItems.value, ...exampleBudget]
+      localStorage.setItem('budgetItems', JSON.stringify(nextItems))
+      budgetItems.value = nextItems
+    }
 
     setRoute(route, { skipScheduleRegeneration: true })
     const byDay = new Map<number, typeof plan>()
@@ -701,16 +875,21 @@ export const useTripStore = defineStore('trip', () => {
       id: 'shanghai_suzhou_4d_2026_01',
       name: '上海—苏州 4 日',
       destinations: jzh,
-      totalDistance: calculateRouteDistance(jzh.filter(isScheduledDestination)),
+      totalDistance: 0,
       estimatedDays: 4
     }
 
-    budgetItems.value = [
-      { id: 'hsb1', day: 3, type: '交通', amount: 160, currency: 'CNY', description: '上海—苏州往返高铁及市内交通' },
-      { id: 'hsb2', day: 1, type: '住宿', amount: 1800, currency: 'CNY', description: '上海 2 晚、苏州 1 晚住宿' },
-      { id: 'hsb3', day: 1, type: '餐饮', amount: 800, currency: 'CNY', description: '四日餐饮与街区休息预算' },
-      { id: 'hsb4', day: 3, type: '门票', amount: 260, currency: 'CNY', description: '豫园、拙政园、留园等门票' }
+    const exampleBudget: BudgetItem[] = [
+      { id: 'hsb1', tripId: route.id, day: 3, type: '交通', amount: 160, currency: 'CNY', description: '上海—苏州往返高铁及市内交通' },
+      { id: 'hsb2', tripId: route.id, day: 1, type: '住宿', amount: 1800, currency: 'CNY', description: '上海 2 晚、苏州 1 晚住宿' },
+      { id: 'hsb3', tripId: route.id, day: 1, type: '餐饮', amount: 800, currency: 'CNY', description: '四日餐饮与街区休息预算' },
+      { id: 'hsb4', tripId: route.id, day: 3, type: '门票', amount: 260, currency: 'CNY', description: '豫园、拙政园、留园等门票' }
     ]
+    if (!budgetItems.value.some(item => item.tripId === route.id)) {
+      const nextItems = [...budgetItems.value, ...exampleBudget]
+      localStorage.setItem('budgetItems', JSON.stringify(nextItems))
+      budgetItems.value = nextItems
+    }
 
     setRoute(route, { skipScheduleRegeneration: true })
     const byDay = new Map<number, typeof plan>()
@@ -734,6 +913,8 @@ export const useTripStore = defineStore('trip', () => {
     destinations,
     currentTrip,
     currentRoute,
+    tripStartDate,
+    transportSegments,
     isRouteDirty,
     schedule,
     budgetItems,
@@ -747,6 +928,8 @@ export const useTripStore = defineStore('trip', () => {
     updateDestinationOrder,
     updateDestinationDetails,
     moveDestinationToDay,
+    moveDestinationToUnscheduled,
+    setTripStartDate,
     reorderDestinationWithinDay,
     updateDayDate,
     setRoute,
@@ -760,15 +943,18 @@ export const useTripStore = defineStore('trip', () => {
     restoreTripSnapshot,
     applyAgentPlan,
     applyTripOutline,
-    loadTrip,
     addSchedule,
     updateSchedule,
     addBudgetItem,
     removeBudgetItem,
     loadPresetRoute,
     saveRouteToList,
+    renameSavedRoute,
     loadRouteFromList,
-    deleteRoute
+    deleteRoute,
+    refreshTransportSegments,
+    setTransportMode,
+    retryTransportSegment
   }
 })
 

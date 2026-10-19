@@ -1,11 +1,18 @@
 <template>
   <div class="budget-view">
-    <el-row :gutter="0" class="budget-layout">
+    <JourneyEmptyState
+      v-if="!activeRouteId"
+      title="还没有加载路线"
+      description="先从首页打开一条路线，再为它记录预算。"
+      action-label="去我的路线"
+      @action="router.push('/home')"
+    />
+    <el-row v-else :gutter="0" class="budget-layout">
       <el-col :span="14" class="ledger-column">
         <el-card class="budget-ledger" shadow="never">
           <template #header>
             <div class="card-header">
-              <span>预算明细</span>
+              <span>{{ tripStore.currentRoute?.name }} · 预算明细</span>
               <el-button type="primary" @click="showAddDialog = true">
                 <el-icon><Plus /></el-icon>
                 添加预算项
@@ -13,7 +20,7 @@
             </div>
           </template>
 
-          <el-table :data="budgetItems" style="width: 100%">
+          <el-table :data="budgetItems" empty-text="还没有预算明细，点击右上角开始记录。" style="width: 100%">
             <el-table-column prop="day" label="天数" width="80" />
             <el-table-column prop="type" label="类型" width="120">
               <template #default="{ row }">
@@ -96,9 +103,10 @@
 
           <el-divider />
 
-          <div class="chart-container">
+          <div v-if="budgetItems.length" class="chart-container">
             <v-chart :option="chartOption" class="budget-chart" autoresize />
           </div>
+          <p v-else class="mobile-budget-empty">这条路线还没有预算，添加后会显示分布。</p>
         </el-card>
       </el-col>
     </el-row>
@@ -136,6 +144,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
 import { PieChart, BarChart } from 'echarts/charts'
@@ -149,6 +158,8 @@ import VChart from 'vue-echarts'
 import { useTripStore } from '@/store/trip'
 import type { BudgetItem } from '@/types'
 import { Plus, Delete } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
+import JourneyEmptyState from '@/components/JourneyEmptyState.vue'
 
 use([
   CanvasRenderer,
@@ -161,11 +172,17 @@ use([
 ])
 
 const tripStore = useTripStore()
+const router = useRouter()
 
-const budgetItems = computed(() => tripStore.budgetItems)
-const totalBudget = computed(() => tripStore.totalBudget)
-const budgetByType = computed(() => tripStore.budgetByType)
-const budgetByDay = computed(() => tripStore.budgetByDay)
+const activeRouteId = computed(() => tripStore.currentRoute?.id)
+const budgetItems = computed(() => tripStore.budgetItems.filter((item) => item.tripId === activeRouteId.value))
+const totalBudget = computed(() => budgetItems.value.reduce((sum, item) => sum + item.amount, 0))
+const budgetByType = computed(() => Object.fromEntries(
+  [...new Set(budgetItems.value.map((item) => item.type))].map((type) => [type, budgetItems.value.filter((item) => item.type === type).reduce((sum, item) => sum + item.amount, 0)])
+))
+const budgetByDay = computed(() => Object.fromEntries(
+  [...new Set(budgetItems.value.map((item) => item.day))].map((day) => [day, budgetItems.value.filter((item) => item.day === day).reduce((sum, item) => sum + item.amount, 0)])
+))
 
 const showAddDialog = ref(false)
 const newBudgetItem = ref<Partial<BudgetItem>>({
@@ -248,13 +265,14 @@ const chartOption = computed(() => {
   }
 })
 
-function addBudgetItem() {
-  if (!newBudgetItem.value.description || !newBudgetItem.value.amount) {
+async function addBudgetItem() {
+  if (!activeRouteId.value || !newBudgetItem.value.description || !newBudgetItem.value.amount) {
     return
   }
 
   const item: BudgetItem = {
     id: Date.now().toString(),
+    tripId: activeRouteId.value,
     day: newBudgetItem.value.day || 1,
     type: newBudgetItem.value.type as BudgetItem['type'],
     description: newBudgetItem.value.description,
@@ -262,7 +280,12 @@ function addBudgetItem() {
     currency: 'CNY'
   }
 
-  tripStore.addBudgetItem(item)
+  try {
+    await tripStore.addBudgetItem(item)
+  } catch {
+    ElMessage.error('保存失败：当前浏览器空间不足')
+    return
+  }
   showAddDialog.value = false
 
   // 重置表单
@@ -275,8 +298,12 @@ function addBudgetItem() {
   }
 }
 
-function removeBudgetItem(id: string) {
-  tripStore.removeBudgetItem(id)
+async function removeBudgetItem(id: string) {
+  try {
+    await tripStore.removeBudgetItem(id)
+  } catch {
+    ElMessage.error('删除失败：无法更新当前浏览器的数据')
+  }
 }
 </script>
 

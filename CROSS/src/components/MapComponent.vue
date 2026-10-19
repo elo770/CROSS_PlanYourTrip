@@ -105,32 +105,6 @@ const MORANDI_PALETTE = [
   '#A14B3C'  // 砖红
 ]
 
-function safeOrderIndexExpr() {
-  // 统一把 order 转成 number，缺失则按 1
-  // index = (order - 1) mod paletteLength
-  return [
-    'mod',
-    ['-', ['coalesce', ['to-number', ['get', 'order']], 1], 1],
-    MORANDI_PALETTE.length
-  ] as any
-}
-
-const circleColorExpr = [
-  'match',
-  safeOrderIndexExpr(),
-  0, MORANDI_PALETTE[0],
-  1, MORANDI_PALETTE[1],
-  2, MORANDI_PALETTE[2],
-  3, MORANDI_PALETTE[3],
-  4, MORANDI_PALETTE[4],
-  5, MORANDI_PALETTE[5],
-  6, MORANDI_PALETTE[6],
-  7, MORANDI_PALETTE[7],
-  8, MORANDI_PALETTE[8],
-  9, MORANDI_PALETTE[9],
-  '#999999'
-] as any
-
 function colorForOrder(order: unknown) {
   const d = Number(order)
   const day = Number.isFinite(d) && d > 0 ? d : 1
@@ -175,10 +149,10 @@ function initMap() {
   const style = maptilerKey
     ? `https://api.maptiler.com/maps/streets-v2/style.json?key=${encodeURIComponent(maptilerKey)}`
     : {
-        version: 8,
+        version: 8 as const,
         sources: {
           osm: {
-            type: 'raster',
+            type: 'raster' as const,
             tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
             tileSize: 256,
             attribution: '© OpenStreetMap contributors'
@@ -187,7 +161,7 @@ function initMap() {
         layers: [
           {
             id: 'osm',
-            type: 'raster',
+            type: 'raster' as const,
             source: 'osm'
           }
         ]
@@ -198,7 +172,7 @@ function initMap() {
     style,
     center: [114.057868, 22.543099],
     zoom: 5,
-    attributionControl: true
+    attributionControl: {}
   })
 
   map.on('load', () => {

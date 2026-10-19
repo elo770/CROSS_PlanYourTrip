@@ -14,31 +14,36 @@
         class="search-button"
         :disabled="!searchQuery.trim() || isSearching"
       >
-        <span v-if="isSearching" class="loading-icon">...</span>
+        <span v-if="isSearching" class="loading-icon" aria-label="正在搜索地点">…</span>
         <span v-else>搜索</span>
       </button>
     </div>
 
     <div v-if="showDropdown" class="search-dropdown">
-      <div v-if="isSearching" class="search-loading">搜索中...</div>
+      <div v-if="isSearching" class="search-loading">正在搜索地点…</div>
       <div v-else-if="errorMessage" class="search-error">{{ errorMessage }}</div>
       <div v-else-if="searchResults.length === 0" class="search-empty">未找到相关地点</div>
-      <div
+      <button
         v-else
         v-for="(result, index) in searchResults"
         :key="`${result.name}-${result.coordinates[0]}-${result.coordinates[1]}-${index}`"
+        type="button"
         class="search-result-item"
-        @click="selectPOI(result)"
+        :disabled="isAlreadyAdded(result)"
+        @click="previewPOI(result)"
       >
-        <div class="poi-name">{{ result.name }}</div>
-        <div class="poi-address">{{ result.address }}</div>
+        <div class="poi-heading">
+          <span class="poi-name">{{ result.name }}</span>
+          <span v-if="isAlreadyAdded(result)" class="poi-added">✓ 已在行程</span>
+        </div>
+        <div class="poi-address">{{ result.district || result.city }}<template v-if="result.address"> · {{ result.address }}</template></div>
         <div class="poi-meta">
           <span class="poi-engine">{{ result.sourceLabel }}</span>
           <span class="poi-coordinates">
             {{ result.coordinates[0].toFixed(6) }}, {{ result.coordinates[1].toFixed(6) }}
           </span>
         </div>
-      </div>
+      </button>
     </div>
   </div>
 </template>
@@ -46,21 +51,23 @@
 <script setup lang="ts">
 import { onBeforeUnmount, ref, watch } from 'vue'
 import { useTripStore } from '@/store/trip'
-import type { Destination } from '@/types'
 
 interface POISearchResult {
+  id: string
   name: string
+  city: string
+  district: string
   address: string
   coordinates: [number, number]
   sourceLabel: string
 }
 
-defineProps<{
-  resolveMapCenter: () => [number, number]
+const props = defineProps<{
+  preferredCity?: string
 }>()
 
 const emit = defineEmits<{
-  select: [poi: Destination]
+  preview: [poi: POISearchResult]
 }>()
 
 const tripStore = useTripStore()
@@ -84,7 +91,7 @@ function handleInput() {
 
   debounceTimer = window.setTimeout(() => {
     if (searchQuery.value.trim().length >= 1) {
-      void searchPOI()
+      void searchSuggestions()
     } else {
       searchResults.value = []
       errorMessage.value = ''
@@ -93,16 +100,24 @@ function handleInput() {
 }
 
 async function searchAMap(trimmed: string): Promise<POISearchResult[]> {
-  const city = tripStore.currentRoute?.name?.replace(/行程|路线/g, '').trim() || ''
   const params = new URLSearchParams({ query: trimmed })
-  if (city) params.set('city', city)
+  if (props.preferredCity?.trim()) params.set('city', props.preferredCity.trim())
   const response = await fetch(`${apiBaseUrl}/poi/search?${params}`)
   const data = await response.json().catch(() => ({})) as { pois?: POISearchResult[]; error?: string }
   if (!response.ok) throw new Error(data.error || `地点搜索服务请求失败（${response.status}）`)
   return data.pois || []
 }
 
-async function searchPOI(query = searchQuery.value) {
+async function searchSuggestionRows(trimmed: string): Promise<POISearchResult[]> {
+  const params = new URLSearchParams({ query: trimmed })
+  if (props.preferredCity?.trim()) params.set('city', props.preferredCity.trim())
+  const response = await fetch(`${apiBaseUrl}/poi/suggest?${params}`)
+  const data = await response.json().catch(() => ({})) as { pois?: POISearchResult[]; error?: string }
+  if (!response.ok) throw new Error(data.error || `地点提示服务请求失败（${response.status}）`)
+  return data.pois || []
+}
+
+async function runSearch(loader: (query: string) => Promise<POISearchResult[]>, query = searchQuery.value) {
   const trimmedQuery = query.trim()
   if (trimmedQuery.length < 1) {
     searchResults.value = []
@@ -117,7 +132,7 @@ async function searchPOI(query = searchQuery.value) {
   showDropdown.value = true
 
   try {
-    const rows = await searchAMap(trimmedQuery)
+    const rows = await loader(trimmedQuery)
     if (mySeq !== searchSeq) return
     searchResults.value = rows
   } catch (error) {
@@ -129,29 +144,27 @@ async function searchPOI(query = searchQuery.value) {
         : error instanceof Error ? `搜索失败：${error.message}` : '搜索失败：网络异常或接口不可用'
     console.error('POI 搜索失败:', error)
   } finally {
-    if (mySeq === searchSeq) {
-      isSearching.value = false
-    }
+    if (mySeq === searchSeq) isSearching.value = false
   }
 }
 
-function selectPOI(poi: POISearchResult) {
-  const destination: Destination = {
-    id: Date.now().toString(),
-      name: poi.name,
-      description: poi.address,
-      coordinates: [poi.coordinates[0], poi.coordinates[1]],
-      order: tripStore.destinations.length + 1,
-      planningStatus: 'unscheduled',
-      source: 'user'
-  }
+function searchSuggestions() {
+  return runSearch(searchSuggestionRows)
+}
 
-  tripStore.addDestination(destination)
-  emit('select', destination)
+async function searchPOI(query = searchQuery.value) {
+  return runSearch(searchAMap, query)
+}
 
-  searchQuery.value = ''
+function isAlreadyAdded(poi: POISearchResult) {
+  return tripStore.destinations.some((item) => item.name === poi.name
+    && Math.abs(item.coordinates[0] - poi.coordinates[0]) < 0.00001
+    && Math.abs(item.coordinates[1] - poi.coordinates[1]) < 0.00001)
+}
+
+function previewPOI(poi: POISearchResult) {
+  emit('preview', poi)
   showDropdown.value = false
-  searchResults.value = []
   errorMessage.value = ''
 }
 
@@ -227,13 +240,7 @@ onBeforeUnmount(() => {
 }
 
 .loading-icon {
-  animation: spin 1s linear infinite;
   display: inline-block;
-}
-
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
 }
 
 .search-dropdown {
@@ -269,7 +276,13 @@ onBeforeUnmount(() => {
 }
 
 .search-result-item {
+  display: block;
+  width: 100%;
   padding: 12px 16px;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  font: inherit;
   cursor: pointer;
   border-bottom: 1px solid rgba(29, 34, 38, 0.1);
   transition: background-color 0.2s;
@@ -279,8 +292,16 @@ onBeforeUnmount(() => {
   background-color: #e4ebef;
 }
 
+.search-result-item:disabled { cursor: default; opacity: .62; }
+.search-result-item:focus-visible { outline: 2px solid #5D7FA3; outline-offset: -2px; }
+
 .search-result-item:last-child {
   border-bottom: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .search-input,
+  .search-result-item { transition: none; }
 }
 
 .poi-name {
@@ -289,6 +310,9 @@ onBeforeUnmount(() => {
   color: #1d2226;
   margin-bottom: 4px;
 }
+
+.poi-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.poi-added { flex: none; color: #5D7FA3; font-size: 11px; }
 
 .poi-address {
   font-size: 12px;

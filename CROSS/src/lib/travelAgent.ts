@@ -38,8 +38,7 @@ function routeDistance(destinations: Destination[]) {
 
 function estimateTransport(distance: number): { mode: TransportMode; minutes: number } {
   if (distance <= 1.2) return { mode: 'walk', minutes: Math.max(10, Math.round(distance * 15)) }
-  if (distance <= 8) return { mode: 'taxi', minutes: Math.round(12 + distance * 4) }
-  return { mode: 'metro', minutes: Math.round(20 + distance * 3) }
+  return { mode: 'drive', minutes: Math.round(12 + distance * 4) }
 }
 
 function scoreDestination(dest: Destination) {
